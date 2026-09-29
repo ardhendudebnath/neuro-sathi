@@ -1,0 +1,43 @@
+# secrets - only .env.example is committed
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*service-account*.json
+google-services.json
+GoogleService-Info.plist
+key.properties
+*.jks
+*.keystore
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.db
+backend/uploads/
+backend/tests/.uploads/
+
+# node / next
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# flutter
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/**/*.g.dart
+mobile/android/local.properties
+
+# os / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
