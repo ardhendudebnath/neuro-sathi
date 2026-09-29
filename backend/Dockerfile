@@ -12,5 +12,8 @@ COPY db ./db
 RUN useradd --system --uid 10001 neuro && mkdir -p /srv/uploads && chown neuro /srv/uploads
 USER neuro
 
+# Trust X-Forwarded-For only from the reverse proxy / dashboard (comma-separated IPs),
+# otherwise clients could spoof their IP to dodge per-IP limits.
+ENV FORWARDED_ALLOW_IPS=127.0.0.1
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]

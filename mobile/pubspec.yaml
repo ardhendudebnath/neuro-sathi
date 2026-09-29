@@ -1,0 +1,35 @@
+name: neuro_sathi
+description: NEURO-SATHI - offline-first cognitive care companion for elderly users in North-East India.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.7.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  drift: ^2.28.0
+  sqlite3: ^2.7.0
+  sqlcipher_flutter_libs: ^0.6.7
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  flutter_secure_storage: ^9.2.4
+  http: ^1.4.0
+  connectivity_plus: ^6.1.4
+  flutter_local_notifications: ^19.4.0
+  timezone: ^0.10.1
+  flutter_tts: ^4.2.3
+  speech_to_text: ^7.3.0
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.28.0
+  build_runner: ^2.5.4
+
+flutter:
+  uses-material-design: true

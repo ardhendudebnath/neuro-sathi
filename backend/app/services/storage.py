@@ -37,13 +37,13 @@ def key_owner(key: str) -> uuid.UUID | None:
         return None
 
 
-def _s3():
+def _s3(public: bool = False):
     import boto3
 
     s = get_settings()
     return boto3.client(
         "s3",
-        endpoint_url=s.s3_endpoint_url,
+        endpoint_url=(s.s3_public_endpoint_url or s.s3_endpoint_url) if public else s.s3_endpoint_url,
         region_name=s.s3_region,
         aws_access_key_id=s.s3_access_key.get_secret_value() if s.s3_access_key else None,
         aws_secret_access_key=s.s3_secret_key.get_secret_value() if s.s3_secret_key else None,
@@ -68,7 +68,7 @@ def _local_sig(key: str, expires: int) -> str:
 def signed_url(key: str) -> str:
     s = get_settings()
     if s.storage_backend == "s3":
-        return _s3().generate_presigned_url(
+        return _s3(public=True).generate_presigned_url(
             "get_object", Params={"Bucket": s.s3_bucket, "Key": key}, ExpiresIn=s.signed_url_seconds
         )
     expires = int(time.time()) + s.signed_url_seconds

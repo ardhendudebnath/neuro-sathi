@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     storage_local_dir: str = "./uploads"
     s3_bucket: str | None = None
     s3_endpoint_url: str | None = None
+    s3_public_endpoint_url: str | None = None  # host browsers use for signed URLs, if different
     s3_region: str = "ap-south-1"
     s3_access_key: SecretStr | None = None
     s3_secret_key: SecretStr | None = None
