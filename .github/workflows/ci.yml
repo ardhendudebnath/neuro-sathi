@@ -99,6 +99,8 @@ jobs:
       - name: Scan the APK for secrets
         run: |
           mkdir -p /tmp/apk && unzip -q -o build/app/outputs/flutter-apk/app-debug.apk -d /tmp/apk
-          if grep -rEal 'nvapi-|sk-[A-Za-z0-9]{20}|-----BEGIN|postgres(ql)?://' /tmp/apk; then
+          # High-signal patterns only: the bundled SQLCipher/OpenSSL and Flutter engine
+          # libraries legitimately contain a bare '-----BEGIN ' PEM marker.
+          if grep -rEal 'nvapi-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|postgres(ql)?(\+[a-z0-9]+)?://[^:@/ ]+:[^@/ ]+@' /tmp/apk; then
             echo "Secret-like string found in the APK"; exit 1
           fi

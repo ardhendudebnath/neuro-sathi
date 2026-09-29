@@ -38,10 +38,14 @@ class Voice {
     }
     await _tts.stop();
     await _stt.listen(
-      localeId: _locales[_language] ?? 'en-IN',
-      listenFor: const Duration(seconds: 12),
-      pauseFor: const Duration(seconds: 3),
-      listenOptions: SpeechListenOptions(onDevice: true, partialResults: false, cancelOnError: true),
+      listenOptions: SpeechListenOptions(
+        localeId: _locales[_language] ?? 'en-IN',
+        listenFor: const Duration(seconds: 12),
+        pauseFor: const Duration(seconds: 3),
+        onDevice: true,
+        partialResults: false,
+        cancelOnError: true,
+      ),
       onResult: (r) {
         if (r.finalResult) {
           onResult(r.recognizedWords);

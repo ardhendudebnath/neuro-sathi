@@ -74,7 +74,7 @@ class _GamePlayScreenState extends ConsumerState<GamePlayScreen> {
       ..reset()
       ..start();
     final s = ref.read(stringsProvider);
-    final display = t.display != null && !t.display!.contains(RegExp(r'\p{Extended_Pictographic}', unicode: true)) ? '. ${t.display}' : '';
+    final display = t.display != null && t.speakDisplay ? '. ${t.display}' : '';
     _say('${s.t(t.promptKey)}$display');
   }
 

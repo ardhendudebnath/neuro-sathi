@@ -10,7 +10,7 @@ class Trial {
     this.display,
     this.imagePath,
     this.memorize,
-    this.speakExtra,
+    this.speakDisplay = true,
   });
 
   final String promptKey;
@@ -19,7 +19,9 @@ class Trial {
   final String? display;
   final String? imagePath;
   final List<String>? memorize;
-  final String? speakExtra;
+
+  /// Whether [display] is read aloud with the prompt (false for picture-only displays).
+  final bool speakDisplay;
 }
 
 class PersonCard {
@@ -82,7 +84,7 @@ List<String> _optionsWith(String correct, List<String> pool, int n, Random rnd) 
 }
 
 Trial _mcq(String promptKey, String correct, List<String> pool, int level, Random rnd,
-    {String? display, String? imagePath, List<String>? memorize, String? speakExtra}) {
+    {String? display, String? imagePath, List<String>? memorize, bool speakDisplay = true}) {
   final options = _optionsWith(correct, pool, _choices(level), rnd);
   return Trial(
     promptKey: promptKey,
@@ -91,7 +93,7 @@ Trial _mcq(String promptKey, String correct, List<String> pool, int level, Rando
     display: display,
     imagePath: imagePath,
     memorize: memorize,
-    speakExtra: speakExtra,
+    speakDisplay: speakDisplay,
   );
 }
 
@@ -102,7 +104,9 @@ List<Trial> photoRecall(GameContent c, int level, Random rnd) {
   return List.generate(trialsPerSession, (_) {
     final p = people[rnd.nextInt(people.length)];
     return _mcq('who_is_this', p.name, names, level, rnd,
-        imagePath: p.photoPath, display: p.photoPath == null ? (p.relationship ?? '🙂') : null);
+        imagePath: p.photoPath,
+        display: p.photoPath == null ? (p.relationship ?? '🙂') : null,
+        speakDisplay: p.relationship != null);
   });
 }
 
@@ -144,7 +148,7 @@ List<Trial> weavingPatterns(GameContent c, int level, Random rnd) {
     final shown = 3 + level;
     final sequence = List.generate(shown + 1, (i) => unit[i % unit.length]);
     final correct = sequence.last;
-    return _mcq('what_comes_next', correct, _patternSymbols, level, rnd, display: sequence.take(shown).join(' '));
+    return _mcq('what_comes_next', correct, _patternSymbols, level, rnd, display: sequence.take(shown).join(' '), speakDisplay: false);
   });
 }
 

@@ -49,6 +49,11 @@ void main() {
     expect(trials.first.promptKey, 'what_is_this');
   });
 
+  test('picture-only displays are not read aloud', () {
+    expect(weavingPatterns(content, 2, Random(1)).every((t) => !t.speakDisplay), isTrue);
+    expect(nameIt(content, 2, Random(1)).every((t) => t.speakDisplay), isTrue);
+  });
+
   test('harder levels offer more choices', () {
     final easy = nameIt(content, 1, Random(1)).first.options.length;
     final hard = nameIt(content, 5, Random(1)).first.options.length;
