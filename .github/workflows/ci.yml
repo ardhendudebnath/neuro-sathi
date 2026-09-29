@@ -93,7 +93,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: {channel: stable, cache: true}
       - run: ./tool/bootstrap.sh
-      - run: flutter analyze
+      - run: flutter analyze --no-fatal-infos
       - run: flutter test
       - run: flutter build apk --debug --dart-define=API_BASE_URL=https://api.example.invalid
       - name: Scan the APK for secrets

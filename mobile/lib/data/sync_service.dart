@@ -95,8 +95,9 @@ class SyncService {
     });
     if (reminders.isNotEmpty) await onRemindersChanged?.call();
 
-    final remaining = await (db.selectOnly(db.syncQueue)..addColumns([db.syncQueue.seq.count()])).getSingle();
-    return (remaining.read(db.syncQueue.seq.count()) ?? 0) > 0;
+    final count = db.syncQueue.seq.count();
+    final remaining = await (db.selectOnly(db.syncQueue)..addColumns([count])).getSingle();
+    return (remaining.read(count) ?? 0) > 0;
   }
 
   Future<String> _deviceId() async {

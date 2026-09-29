@@ -70,8 +70,8 @@ class _NeuroSathiAppState extends ConsumerState<NeuroSathiApp> with WidgetsBindi
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState s) {
-    if (s == AppLifecycleState.resumed) {
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
       final app = ref.read(appProvider.notifier);
       app.logMissedReminders();
       app.syncNow();

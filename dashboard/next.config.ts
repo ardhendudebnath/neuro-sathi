@@ -10,6 +10,7 @@ const securityHeaders = [
 const config: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  eslint: { ignoreDuringBuilds: true }, // linted by its own CI step
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -20,6 +20,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -28,7 +29,11 @@ def utcnow() -> datetime:
 
 
 class Base(DeclarativeBase):
-    type_annotation_map = {datetime: DateTime(timezone=True), dict: JSON, list: JSON}
+    type_annotation_map = {
+        datetime: DateTime(timezone=True),
+        dict: JSON().with_variant(JSONB(), "postgresql"),
+        list: JSON().with_variant(JSONB(), "postgresql"),
+    }
 
 
 class Role(str, enum.Enum):

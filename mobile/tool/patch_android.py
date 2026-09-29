@@ -4,7 +4,7 @@
 - flutter_local_notifications receivers so reminders survive a reboot
 - <queries> for the speech recogniser and text-to-speech engines
 - core library desugaring (required by flutter_local_notifications)
-- minSdk 23 (flutter_secure_storage), app label
+- minSdk at least 23 (flutter_secure_storage), app label
 """
 
 import re
@@ -79,8 +79,8 @@ def patch_gradle() -> None:
         else:
             g += "\ndependencies {\n    " + dep + "\n}\n"
 
-    g = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = 23", g)
-    g = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion 23", g)
+    g = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = maxOf(flutter.minSdkVersion, 23)", g)
+    g = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion Math.max(flutter.minSdkVersion, 23)", g)
     path.write_text(g, encoding="utf-8")
 
 

@@ -23,7 +23,8 @@ def migrate(url: str) -> list[str]:
         if path.name in done:
             continue
         with engine.begin() as conn:
-            conn.exec_driver_sql(path.read_text(encoding="utf-8"))
+            # no_parameters: otherwise psycopg parses "%" placeholders and rejects format('%I', ...).
+            conn.exec_driver_sql(path.read_text(encoding="utf-8"), execution_options={"no_parameters": True})
             conn.execute(text("INSERT INTO schema_migrations (name) VALUES (:n)"), {"n": path.name})
         applied_now.append(path.name)
     engine.dispose()
