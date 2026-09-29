@@ -1,0 +1,24 @@
+title = "NEURO-SATHI secret scan"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "nvidia-api-key"
+description = "NVIDIA build.nvidia.com API key"
+regex = '''nvapi-[A-Za-z0-9_\-]{20,}'''
+keywords = ["nvapi-"]
+
+[[rules]]
+id = "postgres-url-with-password"
+description = "PostgreSQL URL with an inline password"
+regex = '''postgres(?:ql)?(?:\+\w+)?://[^:\s/]+:[^@\s$]{3,}@'''
+keywords = ["postgres"]
+
+[allowlist]
+description = "test fixtures and the blank template"
+paths = ['''\.env\.example$''']
+regexes = [
+  '''nvapi-test''',
+  '''ci-(owner|app|service)@''',  # throwaway CI database passwords
+]

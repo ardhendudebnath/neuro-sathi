@@ -1,0 +1,95 @@
+# Local development stack: PostgreSQL (with RLS), Redis, MinIO (S3-compatible
+# private photo storage), the API, the deviation worker and the dashboard.
+#
+#   cp .env.example .env    # fill in the blanks
+#   docker compose up --build
+#
+# API: http://localhost:8000/docs   Dashboard: http://localhost:3000
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: neuro_owner
+      POSTGRES_PASSWORD: ${OWNER_DB_PASSWORD}
+      POSTGRES_DB: neuro_sathi
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      SERVICE_DB_PASSWORD: ${SERVICE_DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/db/init:/docker-entrypoint-initdb.d:ro
+    ports: ["127.0.0.1:5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neuro_owner -d neuro_sathi"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["127.0.0.1:6379:6379"]
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    volumes: [minio:/data]
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+
+  minio-setup:
+    image: minio/mc:latest
+    depends_on: [minio]
+    entrypoint: >
+      sh -c "sleep 3 && mc alias set local http://minio:9000 $$S3_ACCESS_KEY $$S3_SECRET_KEY &&
+             mc mb --ignore-existing local/neuro-sathi-photos && mc anonymous set none local/neuro-sathi-photos"
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+
+  migrate:
+    build: ./backend
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      MIGRATION_DATABASE_URL: postgresql+psycopg://neuro_owner:${OWNER_DB_PASSWORD}@db:5432/neuro_sathi
+      DATABASE_URL: postgresql+psycopg://neuro_service:${SERVICE_DB_PASSWORD}@db:5432/neuro_sathi
+      JWT_SECRET: ${JWT_SECRET}
+    command: sh -c "python -m app.migrate && python -m app.seed"
+
+  api:
+    build: ./backend
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_started}
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://app_user:${APP_DB_PASSWORD}@db:5432/neuro_sathi
+      SERVICE_DATABASE_URL: postgresql+psycopg://neuro_service:${SERVICE_DB_PASSWORD}@db:5432/neuro_sathi
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_PUBLIC_ENDPOINT_URL: http://localhost:9000
+      FORWARDED_ALLOW_IPS: "*"  # local only; in production list the proxy IPs
+      S3_BUCKET: neuro-sathi-photos
+    ports: ["127.0.0.1:8000:8000"]
+
+  worker:
+    build: ./backend
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://neuro_service:${SERVICE_DB_PASSWORD}@db:5432/neuro_sathi
+    command: python -m app.jobs.deviation_job --every 24h
+
+  dashboard:
+    build: ./dashboard
+    environment:
+      API_BASE_URL: http://api:8000  # server-side only; the browser talks to the dashboard
+    depends_on: [api]
+    ports: ["127.0.0.1:3000:3000"]
+
+volumes:
+  pgdata:
+  minio:
