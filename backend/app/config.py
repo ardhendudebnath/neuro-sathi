@@ -22,7 +22,11 @@ class Settings(BaseSettings):
 
     jwt_secret: SecretStr = SecretStr("dev-only-change-me-dev-only-change-me")
     jwt_algorithm: str = "HS256"
-    access_token_minutes: int = 60 * 24 * 7
+    # The access token is short-lived; the app renews it silently with its session
+    # (refresh) token, which is revocable and expires after this many days unused.
+    access_token_minutes: int = 60
+    refresh_token_days: int = 90
+    max_sessions_per_user: int = 10
 
     otp_ttl_seconds: int = 300
     otp_max_attempts: int = 5

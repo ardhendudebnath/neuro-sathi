@@ -24,6 +24,7 @@ LIMITS: dict[str, str] = {
     "otp_phone": "3/15 minutes",
     "otp_ip": "10/hour",
     "login_fail": "10/hour",
+    "refresh": "30/hour",
     "sathi": "20/minute;200/day",
     "speech": "30/minute;500/day",
     "upload": "20/hour",

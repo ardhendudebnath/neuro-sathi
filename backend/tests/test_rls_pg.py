@@ -79,6 +79,12 @@ def test_app_user_cannot_read_otp_codes(client):
         _rows(a["id"], "user", "SELECT * FROM otp_codes")
 
 
+def test_app_user_cannot_read_sessions(client):
+    a_h, a = signup(client)  # signing in created a refresh-token row for this user
+    with pytest.raises(DBAPIError):
+        _rows(a["id"], "user", "SELECT * FROM refresh_tokens")
+
+
 def test_admin_cannot_read_personal_rows(client):
     from app.models import Role
     from tests.conftest import make_role
