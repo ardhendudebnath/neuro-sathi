@@ -34,6 +34,20 @@ def decode_access_token(token: str) -> tuple[UUID, Role]:
     return UUID(payload["sub"]), Role(payload["role"])
 
 
+def access_token_seconds() -> int:
+    return get_settings().access_token_minutes * 60
+
+
+def new_refresh_token() -> str:
+    return secrets.token_urlsafe(48)
+
+
+def hash_refresh_token(token: str) -> str:
+    """Only this hash is stored. The token is 384 random bits, so a keyed SHA-256 is enough."""
+    key = get_settings().jwt_secret.get_secret_value().encode()
+    return hmac.new(key, f"refresh:{token}".encode(), hashlib.sha256).hexdigest()
+
+
 def new_otp() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 

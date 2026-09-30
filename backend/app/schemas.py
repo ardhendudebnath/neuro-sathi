@@ -43,12 +43,19 @@ class OtpVerify(BaseModel):
     # Only used the first time a phone signs in. Health worker / admin roles are granted by an admin.
     name: str | None = Field(default=None, max_length=120)
     role: Literal["user", "caregiver"] = "user"
+    device: str | None = Field(default=None, max_length=80)  # a label for this session, e.g. "phone" or "dashboard"
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    expires_in: int  # seconds until the access token expires
+    refresh_token: str | None = None  # issued at sign-in only; renew the access token with POST /auth/refresh
     user: "UserOut"
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(min_length=20, max_length=200)
 
 
 class UserOut(ORM):

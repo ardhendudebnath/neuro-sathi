@@ -9,7 +9,11 @@ import '../state/app_state.dart';
 enum _Step { language, phone, code }
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.reauth = false});
+
+  /// Signing in again after the session expired: the account and its data are
+  /// already on the phone, so skip the language and name steps and offer "Later".
+  final bool reauth;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -27,8 +31,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Nothing to choose when only one language is available in this build.
-    if (ref.read(appProvider).catalog.visible.length <= 1) step = _Step.phone;
+    if (widget.reauth) {
+      step = _Step.phone;
+      // Offer the same number, so the data on this phone stays with its owner.
+      ref.read(dbProvider).getValue('phone').then((v) {
+        if (mounted && v != null && phone.text.isEmpty) phone.text = v.startsWith('+91') ? v.substring(3) : v;
+      }).catchError((Object _) {});
+    } else if (ref.read(appProvider).catalog.visible.length <= 1) {
+      step = _Step.phone; // nothing to choose when only one language is available in this build
+    }
   }
 
   @override
@@ -75,6 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               name: name.text.trim().isEmpty ? null : name.text.trim(),
             );
         await ref.read(appProvider.notifier).signedIn(r);
+        if (widget.reauth && mounted) Navigator.of(context).pop();
       });
 
   @override
@@ -133,6 +145,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   List<Widget> _phoneStep(Strings s) => [
+        if (widget.reauth) ...[
+          Text(s.t('session_expired'), style: Theme.of(context).textTheme.bodyLarge),
+          const SizedBox(height: 20),
+        ],
         Text(s.t('enter_phone'), style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 16),
         TextField(
@@ -145,6 +161,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         const SizedBox(height: 24),
         FilledButton(onPressed: busy ? null : _sendCode, child: Text(s.t('send_code'))),
+        if (widget.reauth) TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(s.t('later'))),
       ];
 
   List<Widget> _codeStep(Strings s) => [
@@ -160,7 +177,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
-        TextField(
+        if (!widget.reauth)
+          TextField(
           controller: name,
           textCapitalization: TextCapitalization.words,
           style: const TextStyle(fontSize: 22),

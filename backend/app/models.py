@@ -82,6 +82,21 @@ class OtpCode(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class RefreshToken(Base):
+    """A signed-in device. Only a hash of the token is stored; the token itself is on
+    the device (Keystore-backed storage) or in the dashboard's httpOnly cookie."""
+
+    __tablename__ = "refresh_tokens"
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    device: Mapped[str | None] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    last_used_at: Mapped[datetime] = mapped_column(default=utcnow)
+    expires_at: Mapped[datetime]
+    revoked_at: Mapped[datetime | None]
+
+
 class CaregiverLink(Base):
     __tablename__ = "caregiver_links"
     __table_args__ = (UniqueConstraint("user_id", "caregiver_id"),)

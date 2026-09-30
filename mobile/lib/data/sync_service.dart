@@ -10,8 +10,10 @@ import 'api_client.dart';
 import 'database.dart';
 import 'repository.dart';
 
-/// busy: a sync is already running, here or in the other isolate.
-enum SyncOutcome { synced, offline, signedOut, failed, busy }
+/// sessionExpired: the server will not renew the session; the queue is kept for
+/// when the user signs in again. busy: a sync is already running, here or in the
+/// other isolate.
+enum SyncOutcome { synced, offline, sessionExpired, failed, busy }
 
 /// Offline-first sync:
 /// 1. every local action is already in SyncQueue;
@@ -37,7 +39,7 @@ class SyncService {
   static const _lock = 'sync';
 
   Future<SyncOutcome> syncNow() async {
-    if (api.token == null) return SyncOutcome.signedOut;
+    if (!api.hasSession) return SyncOutcome.sessionExpired;
     if (_running) return SyncOutcome.busy;
     _running = true;
     var locked = false;
@@ -53,8 +55,9 @@ class SyncService {
       return SyncOutcome.synced;
     } on OfflineException {
       return SyncOutcome.offline;
-    } on ApiException catch (e) {
-      if (e.status == 401) return SyncOutcome.signedOut;
+    } on SessionExpiredException {
+      return SyncOutcome.sessionExpired; // nothing is deleted: the queue waits for the next sign-in
+    } on ApiException {
       return SyncOutcome.failed;
     } finally {
       if (locked) await db.unlock(_lock);
@@ -135,6 +138,8 @@ class SyncService {
         final file = File(p.join(dir.path, '${m.id}${p.extension(m.photoKey!)}'));
         await file.writeAsBytes(bytes, flush: true);
         await repo.setLocalPhoto(m.id, file.path);
+      } on SessionExpiredException {
+        rethrow;
       } on ApiException {
         continue; // try again next sync
       }

@@ -39,8 +39,18 @@ void backgroundSyncDispatcher() {
 }
 
 Future<SyncOutcome> runBackgroundSync() async {
-  final token = await SecureStore().token();
-  if (token == null) return SyncOutcome.signedOut; // signed out: nothing to sync
+  final store = SecureStore();
+  final access = await store.token();
+  final refresh = await store.refreshToken();
+  // Signed out, or the session ended and the app is waiting for the user to sign in again.
+  if (access == null && refresh == null) return SyncOutcome.sessionExpired;
+  final api = ApiClient(
+    token: access,
+    accessExpiresAt: await store.accessExpiresAt(),
+    refreshToken: refresh,
+    onAccessRenewed: store.saveAccess, // so the next run, or the app's next start, begins with a valid token
+    onSessionExpired: store.clearSession, // the app then asks the user to sign in again; all data is kept
+  );
   final db = await openEncryptedDb();
   try {
     final repo = Repository(db);
@@ -53,7 +63,7 @@ Future<SyncOutcome> runBackgroundSync() async {
     final sync = SyncService(
       db,
       repo,
-      ApiClient(token: token),
+      api,
       onRemindersChanged: () async =>
           notifications.rescheduleAll(await repo.reminders(), (r) => reminderTitle(strings, r)),
     );

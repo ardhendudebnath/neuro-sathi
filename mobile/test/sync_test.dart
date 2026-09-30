@@ -122,10 +122,50 @@ void main() {
       expect((await repo.reminders()).single.title, 'Metformin');
     });
 
-    test('signed out: nothing is sent', () async {
+    test('no session: nothing is sent', () async {
       final sync = SyncService(db, repo, ApiClient(client: server.client));
-      expect(await sync.syncNow(), SyncOutcome.signedOut);
+      expect(await sync.syncNow(), SyncOutcome.sessionExpired);
+      expect(server.calls, isEmpty);
+    });
+
+    test('an expired access token is renewed and the sync goes through', () async {
+      await playOneGame();
+      final api = ApiClient(
+        client: server.client,
+        token: 'old',
+        accessExpiresAt: DateTime.now().subtract(const Duration(hours: 1)),
+        refreshToken: 'refresh',
+      );
+
+      expect(await SyncService(db, repo, api).syncNow(), SyncOutcome.synced);
+
+      expect(server.calls.first, '/auth/refresh');
+      expect(await queued(), 0);
+    });
+
+    test('an ended session loses nothing: the queue waits for the next sign-in', () async {
+      await playOneGame();
+      server.refreshTokenValid = false;
+      var ended = 0;
+      final api = ApiClient(
+        client: server.client,
+        token: 'old',
+        accessExpiresAt: DateTime.now().subtract(const Duration(hours: 1)),
+        refreshToken: 'ended-on-the-server',
+        onSessionExpired: () async => ended++,
+      );
+
+      expect(await SyncService(db, repo, api).syncNow(), SyncOutcome.sessionExpired);
+
+      expect(ended, 1);
+      expect(await queued(), 1, reason: 'the activity is still on the phone');
       expect(server.syncBodies, isEmpty);
+      expect(await db.tryLock('sync', AppConfig.syncLockTtl), isTrue, reason: 'the lock is released');
+
+      // After signing in again the same queue is uploaded.
+      final again = ApiClient(client: server.client, token: 'test-token', refreshToken: 'new-session');
+      expect(await db.unlock('sync').then((_) => SyncService(db, repo, again).syncNow()), SyncOutcome.synced);
+      expect(await queued(), 0);
     });
   });
 
