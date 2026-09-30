@@ -180,10 +180,10 @@ def test_admin_upload_is_validated_then_published(client):
     assert "strings.tap is missing" in r.json()["detail"]["errors"]
 
     reviewed = copy.deepcopy(lp.pack("as"))
-    reviewed["version"] = 2
+    reviewed["version"] = lp.pack("as")["version"] + 1
     reviewed["meta"]["release"] = "public"
     reviewed["meta"]["review"] = {"status": "reviewed", "reviewers": ["Test Reviewer"]}
     r = client.put("/admin/language-packs", json={"document": reviewed, "published": True}, headers=admin)
     assert r.status_code == 200, r.text
     served = client.get("/content/language-packs/as", headers=h).json()
-    assert served["version"] == 2
+    assert served["version"] == reviewed["version"]

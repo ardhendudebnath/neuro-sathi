@@ -5,11 +5,13 @@ import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../config.dart';
 import 'api_client.dart';
 import 'database.dart';
 import 'repository.dart';
 
-enum SyncOutcome { synced, offline, signedOut, failed }
+/// busy: a sync is already running, here or in the other isolate.
+enum SyncOutcome { synced, offline, signedOut, failed, busy }
 
 /// Offline-first sync:
 /// 1. every local action is already in SyncQueue;
@@ -18,6 +20,10 @@ enum SyncOutcome { synced, offline, signedOut, failed }
 /// 4. only then is the batch cleared from the queue. The batch_id is kept
 ///    until acknowledged, so a batch interrupted mid-sync is retried with the
 ///    same id and the server does not apply it twice.
+///
+/// The same service runs in the app and in the background worker
+/// (services/background_sync.dart). A lock in the shared database keeps the
+/// two from syncing at the same time.
 class SyncService {
   SyncService(this.db, this.repo, this.api, {this.onRemindersChanged});
 
@@ -28,11 +34,16 @@ class SyncService {
   bool _running = false;
 
   static const _batchSize = 200;
+  static const _lock = 'sync';
 
   Future<SyncOutcome> syncNow() async {
-    if (_running || api.token == null) return api.token == null ? SyncOutcome.signedOut : SyncOutcome.synced;
+    if (api.token == null) return SyncOutcome.signedOut;
+    if (_running) return SyncOutcome.busy;
     _running = true;
+    var locked = false;
     try {
+      locked = await db.tryLock(_lock, AppConfig.syncLockTtl);
+      if (!locked) return SyncOutcome.busy;
       var more = true;
       while (more) {
         more = await _syncOneBatch();
@@ -46,6 +57,7 @@ class SyncService {
       if (e.status == 401) return SyncOutcome.signedOut;
       return SyncOutcome.failed;
     } finally {
+      if (locked) await db.unlock(_lock);
       _running = false;
     }
   }

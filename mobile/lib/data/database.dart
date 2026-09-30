@@ -153,6 +153,27 @@ class AppDb extends _$AppDb {
 
   Future<void> removeValue(String key) => (delete(keyValues)..where((t) => t.key.equals(key))).go();
 
+  /// A lock shared by every connection to this database: the app and the
+  /// background sync worker run in different isolates. Returns false if it is
+  /// already held; a lock older than [ttl] is treated as abandoned (its holder
+  /// was killed) and taken over.
+  Future<bool> tryLock(String name, Duration ttl) async {
+    try {
+      return await transaction(() async {
+        final key = 'lock_$name';
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final heldSince = int.tryParse(await getValue(key) ?? '');
+        if (heldSince != null && now - heldSince < ttl.inMilliseconds) return false;
+        await setValue(key, '$now');
+        return true;
+      });
+    } on Object {
+      return false; // the other connection is writing right now: treat the lock as taken
+    }
+  }
+
+  Future<void> unlock(String name) => removeValue('lock_$name');
+
   /// Wipes everything (sign-out): the phone keeps only the signed-in user's data.
   Future<void> wipe() => transaction(() async {
         for (final table in allTables) {
@@ -190,6 +211,11 @@ Future<AppDb> openEncryptedDb() async {
           throw StateError('SQLCipher is not available; refusing to store data unencrypted.');
         }
         db.execute("PRAGMA key = \"x'$hexKey'\";");
+        // The app and the background sync worker each hold a connection:
+        // write-ahead logging lets one read while the other writes, and a
+        // writer waits briefly for the other instead of failing.
+        db.execute('PRAGMA journal_mode = WAL;');
+        db.execute('PRAGMA busy_timeout = 5000;');
       },
     ),
   );

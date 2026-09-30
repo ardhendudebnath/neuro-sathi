@@ -1,6 +1,6 @@
 {
   "language": "as",
-  "version": 1,
+  "version": 2,
   "meta": {
     "english_name": "Assamese",
     "native_name": "অসমীয়া",
@@ -75,7 +75,9 @@
     "error_try_later": "বহুবাৰ চেষ্টা কৰা হ'ল। অলপ অপেক্ষা কৰি আকৌ চেষ্টা কৰক।",
     "error_generic": "কিবা ভুল হ'ল। অনুগ্ৰহ কৰি আকৌ চেষ্টা কৰক।",
     "disclaimer": "নিউৰো-সাথীয়ে স্মৃতি আৰু দৈনিক কামত সহায় কৰে। ই ৰোগ নিৰ্ণয় নকৰে। স্বাস্থ্যৰ সমস্যাৰ বাবে চিকিৎসকক দেখুৱাওক।",
-    "voice_unavailable": "এই ফোনত এই ভাষাৰ মাত উপলব্ধ নহয়।"
+    "voice_unavailable": "এই ফোনত এই ভাষাৰ মাত উপলব্ধ নহয়।",
+    "last_synced": "শেষ ছিংক: {time}",
+    "never_synced": "এতিয়ালৈকে ছিংক হোৱা নাই"
   },
   "voice_prompts": {
     "reminder_medication": "ঔষধ খোৱাৰ সময় হ'ল: {title}।",

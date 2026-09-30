@@ -20,16 +20,20 @@ class ReminderNotifications {
     fullScreenIntent: false,
   );
 
-  Future<void> init(void Function(String? payload) onTap) async {
+  /// [requestPermission] is false in the background sync worker: asking for the
+  /// notification permission needs a screen, and the app has already asked.
+  Future<void> init(void Function(String? payload) onTap, {bool requestPermission = true}) async {
     tzdata.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Kolkata')); // all of NER is on IST
     await _plugin.initialize(
       const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
       onDidReceiveNotificationResponse: (r) => onTap(r.payload),
     );
-    await _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+    if (requestPermission) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    }
   }
 
   /// Stable int id per (reminder, weekday) for the plugin.
