@@ -1,0 +1,80 @@
+# Language packs
+
+One JSON file per language. The same files are used by the backend (Sathi's answers, the packs the phone downloads) and by the phone app (bundled at build time), so a language is added or corrected here and nowhere else.
+
+| File | Language | Script | Release | Review |
+| --- | --- | --- | --- | --- |
+| `en.json` | English | Latin | public | source language |
+| `hi.json` | Hindi | Devanagari | public | **not yet reviewed** |
+| `as.json` | Assamese | Bengali-Assamese | preview | not yet reviewed |
+| `bn.json` | Bengali | Bengali | preview | not yet reviewed |
+| `ne.json` | Nepali | Devanagari | preview | not yet reviewed |
+
+All non-English packs were drafted by an AI model. A mistranslated medicine reminder can cause real harm, so each pack needs a native speaker's review before users see it.
+
+## Release rules
+
+- **`preview`**: hidden from users. The app shows it only in a reviewer build (`flutter run --dart-define=SHOW_PREVIEW_LANGUAGES=true`), and the API does not serve it.
+- **`public`**: offered in the app's language picker and served by `/content/language-packs/{code}`.
+
+Hindi is `public` because it was in the first version's scope, but it has had no native-speaker review either. The validator prints a warning for it until it is reviewed.
+
+## Reviewing a pack
+
+1. Build the app with `--dart-define=SHOW_PREVIEW_LANGUAGES=true` and pick the language, or read the JSON directly.
+2. Fix the text in the file. Things to check:
+   - **Reminders and medicine wording** (`medicine_time`, `voice_prompts`, `sathi.answers.med_*`): clear, polite and unambiguous.
+   - **Respectful address** for elderly users throughout.
+   - **`sathi.keywords`**: the words people really use when asking about medicine, the time or day, a person, and today's plan. See the keyword rules below.
+   - **`games`**: food names, the daily routine and object descriptions should be familiar locally.
+   - **`time.periods`**: the day-part words and the hour each starts.
+3. In `meta.review`, set `"status": "reviewed"` and add the reviewers' names to `"reviewers"`.
+4. Set `meta.release` to `"public"` and raise `version` by one (phones download a pack only when its version is newer than the bundled one).
+5. Run the validator and the tests (below), then open a pull request.
+
+## Adding a language
+
+1. Copy `en.json` to `<code>.json` (a BCP-47 code of at most 8 characters, such as `kha` or `mni-Beng`) and set `"language"` to the same code.
+2. Fill in `meta`: names, `script` (`Latn`, `Beng` or `Deva`), `release: "preview"`, review status `unreviewed`, the phone voice locales to try in order (`tts_locales`, `stt_locales`), and whether the hosted companion model supports the language (`llm`).
+3. Translate every section. Keep the `{placeholders}` exactly as in English.
+4. Run the validator.
+
+A new script needs one line in `SCRIPT_RANGES` in `backend/app/language_packs.py` so the script checks cover it.
+
+## What a pack contains
+
+| Section | Used for |
+| --- | --- |
+| `strings` | All app text. |
+| `voice_prompts` | Sentences read aloud, such as reminder announcements. |
+| `days` | Seven day names, Monday first. |
+| `time` | 12-hour time: `format` with `{h}`, `{mm}`, `{period}`; `periods` (day-part word and the hour it starts; hours before the first one use the last, for the night); `digits` (`latin`, `beng` or `deva`). |
+| `regions` | Names of the eight North-Eastern states. |
+| `sathi.answers` | Sathi's scripted answers. |
+| `sathi.keywords` | Words that tell Sathi what a question is about. |
+| `games` | Game names, a food list (10 or more), the daily routine (same steps and order as English) and familiar objects with a one-line description. |
+
+### Keyword rules
+
+- A keyword is one word or a phrase. It must match whole words: Bengali `কে` (who) does not match inside `আজকে` (today).
+- End a keyword with `*` to allow suffixes: `ওষুধ*` also matches `ওষুধের` and `ওষুধটা`.
+- English keywords always apply too, because people mix in words like "tablet".
+- Questions are checked in this order: medicine, time, who, today's plan.
+
+## Checking packs
+
+```bash
+cd backend
+python -m app.language_packs check
+```
+
+```bash
+cd backend
+pytest tests/test_language_packs.py
+```
+
+The validator fails a pack that is missing a key, changes a placeholder, has the wrong number of days or routine steps, contains text in another script, or mixes up look-alike letters (Bengali `র` in an Assamese pack, Assamese `ৰ` or `ৱ` in a Bengali pack). CI runs it on every pull request.
+
+## How the app gets them
+
+`mobile/tool/sync_language_packs.py` (run by `tool/bootstrap.sh`) copies these files into the app's assets, so choosing a language and everything else works with no internet. When the server publishes a newer version of the user's pack, the app downloads it at the next sync and uses it instead.

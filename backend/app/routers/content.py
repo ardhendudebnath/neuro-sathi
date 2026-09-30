@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_, select
 
+from .. import language_packs
 from ..audit import record_audit
 from ..deps import Actor, ActorDep, DbDep, require_roles
 from ..models import AuditLog, CulturalContent, Game, LanguagePack, Role, utcnow
@@ -17,6 +18,7 @@ from ..schemas import (
     CulturalUpsert,
     GameOut,
     GameUpsert,
+    LanguageOut,
     LanguagePackOut,
     LanguagePackUpsert,
 )
@@ -49,6 +51,28 @@ def cultural(
     if updated_after:
         q = q.where(CulturalContent.updated_at > as_utc(updated_after))
     return list(db.scalars(q.order_by(CulturalContent.category, CulturalContent.title)))
+
+
+@router.get("/languages", response_model=list[LanguageOut], dependencies=READ)
+def languages(_: ActorDep, db: DbDep) -> list[LanguageOut]:
+    """Published languages (latest version of each)."""
+    latest: dict[str, LanguagePack] = {}
+    for pack in db.scalars(select(LanguagePack).where(LanguagePack.published.is_(True))):
+        if pack.language not in latest or pack.version > latest[pack.language].version:
+            latest[pack.language] = pack
+    out = []
+    for code, pack in sorted(latest.items()):
+        info = pack.document.get("meta", {})
+        out.append(
+            LanguageOut(
+                code=code,
+                english_name=info.get("english_name", code),
+                native_name=info.get("native_name", code),
+                script=info.get("script", ""),
+                version=pack.version,
+            )
+        )
+    return out
 
 
 @router.get("/language-packs/{language}", response_model=LanguagePackOut, dependencies=READ)
@@ -109,16 +133,26 @@ def update_cultural(item_id: UUID, body: CulturalUpsert, actor: Admin, db: DbDep
 
 @admin.put("/language-packs", response_model=LanguagePackOut, dependencies=WRITE)
 def upsert_language_pack(body: LanguagePackUpsert, actor: Admin, db: DbDep) -> LanguagePack:
-    pack = db.scalar(select(LanguagePack).where(LanguagePack.language == body.language, LanguagePack.version == body.version))
+    """Add or replace one pack version. It must pass the same checks as the files in
+    content/language-packs (complete, same placeholders as English, right script)."""
+    doc = body.document
+    errors, _ = language_packs.validate(doc, language_packs.pack(language_packs.SOURCE))
+    if errors:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, {"message": "Language pack is not valid", "errors": errors[:50]})
+    code, version = doc["language"], doc["version"]
+    if not isinstance(code, str) or not 2 <= len(code) <= 8 or not isinstance(version, int) or version < 1:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "language must be a 2-8 character code and version a positive integer")
+    fields = {"strings": doc["strings"], "voice_prompts": doc["voice_prompts"], "document": doc, "published": body.published}
+    pack = db.scalar(select(LanguagePack).where(LanguagePack.language == code, LanguagePack.version == version))
     if pack is None:
-        pack = LanguagePack(**body.model_dump())
+        pack = LanguagePack(language=code, version=version, **fields)
         db.add(pack)
     else:
-        for k, v in body.model_dump().items():
+        for k, v in fields.items():
             setattr(pack, k, v)
     pack.updated_at = utcnow()
     db.flush()
-    record_audit(db, actor.id, "upsert_language_pack", language=body.language, version=body.version)
+    record_audit(db, actor.id, "upsert_language_pack", language=code, version=version, published=body.published)
     return pack
 
 

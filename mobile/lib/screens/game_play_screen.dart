@@ -43,10 +43,10 @@ class _GamePlayScreenState extends ConsumerState<GamePlayScreen> {
 
   Future<void> _start() async {
     final repo = _repo;
-    final lang = ref.read(appProvider).language;
+    final pack = ref.read(appProvider).currentPack;
     final g = widget.game;
     final level = await chooseLevel(repo, g.slug, suggested: g.suggestedLevel, minLevel: g.minLevel, maxLevel: g.maxLevel);
-    final content = await loadContent(repo, lang);
+    final content = await loadContent(repo, pack);
     trials = trialsFor(g.slug, content, level, Random());
     recorder = SessionRecorder(slug: g.slug, level: level);
     if (!mounted) return;
@@ -127,7 +127,7 @@ class _GamePlayScreenState extends ConsumerState<GamePlayScreen> {
     final s = ref.watch(stringsProvider);
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.game.name),
+        title: Text(s.gameName(widget.game.slug, widget.game.name)),
         bottom: phase == _Phase.loading || phase == _Phase.done
             ? null
             : PreferredSize(

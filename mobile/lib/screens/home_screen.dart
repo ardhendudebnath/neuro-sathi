@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../data/repository.dart';
-import '../services/sathi_local.dart' show formatTime;
 import '../state/app_state.dart';
 import '../widgets/common.dart';
 import 'games_screen.dart';
@@ -113,7 +112,7 @@ class _NextReminderCard extends ConsumerWidget {
           text = s.t('no_more_today');
         } else {
           final m = minutesOf(upcoming.first);
-          text = '${s.t('next_reminder')}: ${formatTime(m ~/ 60, m % 60)} · ${upcoming.first.title}';
+          text = '${s.t('next_reminder')}: ${s.formatTime(m ~/ 60, m % 60)} · ${upcoming.first.title}';
         }
         return Card(
           elevation: 0,

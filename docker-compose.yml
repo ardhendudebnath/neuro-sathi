@@ -48,7 +48,7 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY}
 
   migrate:
-    build: ./backend
+    build: {context: ., dockerfile: backend/Dockerfile}
     depends_on:
       db: {condition: service_healthy}
     environment:
@@ -58,7 +58,7 @@ services:
     command: sh -c "python -m app.migrate && python -m app.seed"
 
   api:
-    build: ./backend
+    build: {context: ., dockerfile: backend/Dockerfile}
     depends_on:
       migrate: {condition: service_completed_successfully}
       redis: {condition: service_started}
@@ -75,7 +75,7 @@ services:
     ports: ["127.0.0.1:8000:8000"]
 
   worker:
-    build: ./backend
+    build: {context: ., dockerfile: backend/Dockerfile}
     depends_on:
       migrate: {condition: service_completed_successfully}
     env_file: .env

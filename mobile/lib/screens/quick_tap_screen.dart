@@ -106,7 +106,7 @@ class _QuickTapScreenState extends ConsumerState<QuickTapScreen> {
     final s = ref.watch(stringsProvider);
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.game.name)),
+      appBar: AppBar(title: Text(s.gameName(widget.game.slug, widget.game.name))),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),

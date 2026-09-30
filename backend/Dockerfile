@@ -1,13 +1,17 @@
+# Built from the repository root (docker-compose sets context: .) so the image
+# can include content/language-packs alongside the API code.
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /srv
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app ./app
-COPY db ./db
+COPY backend/app ./app
+COPY backend/db ./db
+COPY content/language-packs ./content/language-packs
+ENV LANGUAGE_PACKS_DIR=/srv/content/language-packs
 
 RUN useradd --system --uid 10001 neuro && mkdir -p /srv/uploads && chown neuro /srv/uploads
 USER neuro

@@ -33,3 +33,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/lang/  # generated from content/language-packs by tool/sync_language_packs.py

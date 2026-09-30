@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import '../data/repository.dart';
+import '../l10n/language_pack.dart';
 import '../services/difficulty.dart';
 import 'trials.dart';
 
@@ -68,20 +69,27 @@ Future<int> chooseLevel(Repository repo, String slug, {int? suggested, required 
   return suggested == null ? local : min(max(local, suggested - 1), suggested + 1);
 }
 
-/// Builds the content games draw on from the memory book and synced NER content.
-Future<GameContent> loadContent(Repository repo, String language) async {
+/// Builds the content games draw on: the memory book plus word lists, routines
+/// and objects from the user's language pack. Server cultural items are in
+/// English, so they are added only for English.
+Future<GameContent> loadContent(Repository repo, LanguagePack pack) async {
   final memories = await repo.memories();
-  final foods = await repo.cultural(category: 'food');
-  final objects = await repo.cultural(category: 'object');
+  final english = pack.code == 'en';
+  final serverFoods = english ? (await repo.cultural(category: 'food')).map((f) => f.title) : const <String>[];
+  final serverObjects = english
+      ? (await repo.cultural(category: 'object'))
+          .map((o) => ObjectCard(o.title, ((jsonDecode(o.data) as Map<String, dynamic>)['note'] as String?) ?? o.title))
+      : const <ObjectCard>[];
   return GameContent(
-    language: language,
     people: memories
         .where((m) => m.kind == 'person')
         .map((m) => PersonCard(name: m.personName ?? m.title, relationship: m.relationship, photoPath: m.localPhotoPath))
         .toList(),
-    foods: language == 'en' ? foods.map((f) => f.title).toList() : const [],
-    objects: objects
-        .map((o) => ObjectCard(o.title, ((jsonDecode(o.data) as Map<String, dynamic>)['note'] as String?) ?? o.title))
-        .toList(),
+    foods: {...(pack.foods.isEmpty ? defaultFoods : pack.foods), ...serverFoods}.toList(),
+    routine: pack.routine.isEmpty ? defaultRoutine : pack.routine,
+    objects: [
+      ...(pack.objects.isEmpty ? defaultObjects : pack.objects.map((o) => ObjectCard(o.title, o.note))),
+      ...serverObjects,
+    ],
   );
 }

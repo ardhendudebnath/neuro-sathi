@@ -46,7 +46,10 @@ class _SathiScreenState extends ConsumerState<SathiScreen> {
 
   Future<String> _answer(String question) async {
     final repo = ref.read(repoProvider);
-    final lang = ref.read(appProvider).language;
+    final app = ref.read(appProvider);
+    final lang = app.language;
+    final pack = app.currentPack;
+    final english = app.catalog.english;
     final reminders = (await repo.reminders()).map((r) {
       final p = r.timeOfDay.split(':').map(int.parse).toList();
       return LocalReminder(r.title, r.kind, p[0], p[1], daysOf(r), active: r.active);
@@ -54,7 +57,7 @@ class _SathiScreenState extends ConsumerState<SathiScreen> {
     final people = (await repo.memories())
         .map((m) => LocalPerson(title: m.title, name: m.personName, relationship: m.relationship, description: m.description))
         .toList();
-    final local = answerLocally(question, lang, reminders, people, DateTime.now());
+    final local = answerLocally(question, pack, english, reminders, people, DateTime.now());
     if (local != null) {
       await repo.logActivity('sathi_ask', {'source': 'local', 'language': lang});
       return local;
@@ -65,9 +68,9 @@ class _SathiScreenState extends ConsumerState<SathiScreen> {
       return r['answer'] as String;
     } on OfflineException {
       await repo.logActivity('sathi_ask', {'source': 'offline_fallback', 'language': lang});
-      return fallbackAnswer(lang);
+      return fallbackAnswer(pack, english);
     } on ApiException {
-      return fallbackAnswer(lang);
+      return fallbackAnswer(pack, english);
     }
   }
 

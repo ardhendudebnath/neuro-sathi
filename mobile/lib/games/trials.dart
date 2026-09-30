@@ -37,24 +37,27 @@ class ObjectCard {
   final String note;
 }
 
-/// Content a session can draw on: memory book, synced NER cultural items and built-ins.
+/// Content a session can draw on: the memory book, plus word lists, routines and
+/// objects from the user's language pack (English defaults below).
 class GameContent {
-  const GameContent({this.people = const [], this.foods = const [], this.objects = const [], this.language = 'en'});
+  const GameContent({
+    this.people = const [],
+    this.foods = defaultFoods,
+    this.routine = defaultRoutine,
+    this.objects = defaultObjects,
+  });
   final List<PersonCard> people;
   final List<String> foods;
+  final List<String> routine;
   final List<ObjectCard> objects;
-  final String language;
 }
 
 const trialsPerSession = 8;
 
-// Built-in, culturally familiar defaults used until content is synced.
-const _foods = {
-  'en': ['Rice', 'Dal', 'Fish', 'Tea', 'Banana', 'Pitha', 'Potato', 'Egg', 'Mustard greens', 'Bamboo shoot', 'Orange', 'Jaggery'],
-  'hi': ['चावल', 'दाल', 'मछली', 'चाय', 'केला', 'पीठा', 'आलू', 'अंडा', 'सरसों का साग', 'बाँस की कोंपल', 'संतरा', 'गुड़'],
-};
+// English defaults (same as content/language-packs/en.json), used if a pack is missing a list.
+const defaultFoods = ['Rice', 'Dal', 'Fish', 'Tea', 'Banana', 'Pitha', 'Potato', 'Egg', 'Mustard greens', 'Bamboo shoot', 'Orange', 'Jaggery'];
 
-const _objects = [
+const defaultObjects = [
   ObjectCard('Gamosa', 'White cloth with a red woven border, given as a mark of respect'),
   ObjectCard('Japi', 'Traditional hat made of bamboo and palm leaves'),
   ObjectCard('Xorai', 'Bell-metal tray on a stand, used for offerings'),
@@ -65,10 +68,10 @@ const _objects = [
   ObjectCard('Dao', 'Large knife used for cutting bamboo and wood'),
 ];
 
-const _routine = {
-  'en': ['Wake up', 'Brush teeth', 'Morning tea', 'Prayer', 'Breakfast', 'Morning medicine', 'Short walk', 'Lunch', 'Rest', 'Evening tea', 'Dinner', 'Sleep'],
-  'hi': ['उठना', 'दाँत साफ़ करना', 'सुबह की चाय', 'प्रार्थना', 'नाश्ता', 'सुबह की दवा', 'थोड़ी सैर', 'दोपहर का खाना', 'आराम', 'शाम की चाय', 'रात का खाना', 'सोना'],
-};
+const defaultRoutine = [
+  'Wake up', 'Brush teeth', 'Morning tea', 'Prayer', 'Breakfast', 'Morning medicine',
+  'Short walk', 'Lunch', 'Rest', 'Evening tea', 'Dinner', 'Sleep',
+];
 
 const _oddPairs = [
   ['🐟', '🐠'], ['🌸', '🌼'], ['☕', '🍵'], ['🍚', '🍙'], ['🐘', '🦏'], ['🥭', '🍋'], ['🐓', '🦆'], ['🌳', '🌲'],
@@ -111,7 +114,7 @@ List<Trial> photoRecall(GameContent c, int level, Random rnd) {
 }
 
 List<Trial> marketList(GameContent c, int level, Random rnd) {
-  final pool = {...c.foods, ...?_foods[c.language]}.toList()..shuffle(rnd);
+  final pool = c.foods.toSet().toList()..shuffle(rnd);
   final count = const [3, 4, 5, 6, 7][(level - 1).clamp(0, 4)];
   final seen = pool.take(count).toList();
   final unseen = pool.skip(count).toList();
@@ -153,7 +156,7 @@ List<Trial> weavingPatterns(GameContent c, int level, Random rnd) {
 }
 
 List<Trial> nameIt(GameContent c, int level, Random rnd) {
-  final objects = [...c.objects, ..._objects];
+  final objects = c.objects.isEmpty ? defaultObjects : c.objects;
   final titles = objects.map((o) => o.title).toList();
   return List.generate(trialsPerSession, (_) {
     final o = objects[rnd.nextInt(objects.length)];
@@ -162,7 +165,7 @@ List<Trial> nameIt(GameContent c, int level, Random rnd) {
 }
 
 List<Trial> myDay(GameContent c, int level, Random rnd) {
-  final steps = _routine[c.language] ?? _routine['en']!;
+  final steps = c.routine.length > 5 ? c.routine : defaultRoutine;
   final shown = const [2, 3, 3, 4, 4][(level - 1).clamp(0, 4)];
   return List.generate(trialsPerSession, (_) {
     final start = rnd.nextInt(steps.length - shown);

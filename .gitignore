@@ -35,6 +35,7 @@ mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
 mobile/**/*.g.dart
 mobile/android/local.properties
+mobile/assets/lang/
 
 # os / editors
 .DS_Store

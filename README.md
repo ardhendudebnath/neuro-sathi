@@ -39,6 +39,7 @@ flowchart LR
 | [`backend/`](backend) | FastAPI API: OTP/JWT auth, roles, `/sync`, memory book, reminders, content, Sathi, speech, dashboard, admin. PostgreSQL schema and RLS in [`backend/db/migrations`](backend/db/migrations). |
 | [`dashboard/`](dashboard) | Next.js caregiver and health-worker dashboard. |
 | [`mobile/`](mobile) | Flutter app for elderly users (Android first). |
+| [`content/language-packs/`](content/language-packs) | One JSON file per language, shared by the backend and the app, with a [guide for translators and reviewers](content/language-packs/README.md). |
 | [`docker-compose.yml`](docker-compose.yml) | Local stack: Postgres, Redis, MinIO, API, deviation worker, dashboard. |
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | gitleaks, backend on SQLite and on PostgreSQL + RLS, dashboard build + bundle scan, Flutter analyze/test/APK + APK scan. |
 
@@ -86,6 +87,7 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 - **Offline first.** The app writes every action to its encrypted local database and a sync queue. Games, reminders, the memory book and everyday Sathi questions work with no signal. When online, queued changes are sent to `/sync` in batches. Each batch has a `batch_id` that is kept until the server acknowledges it, so an interrupted batch is retried without being applied twice. Conflicts are resolved by the latest `updated_at`, except that a caregiver's memory-book edit the phone hasn't seen yet wins.
 - **Reminders** are scheduled on the phone (weekly, IST) and fire without network. Marking one done, or missing it past a 2-hour grace window, is logged for adherence trends.
 - **Sathi** answers today's plan, the next medicine, "who is …" (from the memory book) and the date and time, both on the phone and on the server. Nothing needs to leave the device for these. Other questions go to the backend. There, the NVIDIA Safety Guard checks the question and the reply, and a Sarvam-M call receives only the question text.
+- **Languages.** All wording lives in [language packs](content/language-packs): app text, reminder announcements, Sathi's answers and the words it listens for, day names, local time wording and digits, and game word lists. English and Hindi are offered to users. Assamese, Bengali and Nepali are drafted and wait for native-speaker review; until then they appear only in reviewer builds (`--dart-define=SHOW_PREVIEW_LANGUAGES=true`). Packs are bundled with the app so they work offline, and a newer published version is downloaded at sync.
 - **Personalisation (v1, explainable).** Per-game features (accuracy, completion, response time, repeated errors) set the difficulty and rank activities with a plain-language reason. The same rules run on the phone for offline play.
 - **Deviation detection.** A daily job compares each user's last 7 days with their own previous 28 days. A metric is flagged only when the change is beyond 2 SD of their daily values *and* practically large. Alerts recommend a check-in and are never framed as a diagnosis.
 
@@ -103,7 +105,9 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 
 Built so far: everything above. Not yet done:
 
-- Regional NER language packs beyond English and Hindi (Assamese, Manipuri, Bodo and others). The pipeline for downloadable packs exists; see [docs/nvidia-models.md](docs/nvidia-models.md) for the speech-model gap.
+- Native-speaker review of the Hindi, Assamese, Bengali and Nepali packs (all AI-drafted). Assamese, Bengali and Nepali stay hidden from users until reviewed.
+- More NER languages: Manipuri (planned in both Bengali script and Meitei Mayek), Bodo, Khasi, Mizo and others.
+- Voice for regional languages. Phones often have no Assamese voice, so the app falls back to a Bengali one; the hosted companion model does not cover Assamese or Nepali, so Sathi gives scripted answers there. See [docs/nvidia-models.md](docs/nvidia-models.md).
 - Trained tree-based models (scikit-learn / XGBoost) replacing the v1 rules once there is real data. The same goes for a TFLite model on the phone.
 - Background sync via WorkManager while the app is closed. Today it syncs on open, on reconnect and every 15 minutes while open.
 - Clinical validation and usability studies with elderly users and caregivers in the NER.

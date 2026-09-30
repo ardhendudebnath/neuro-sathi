@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../data/repository.dart';
-import '../services/sathi_local.dart' show formatTime;
 import '../state/app_state.dart';
 import '../widgets/common.dart';
 
@@ -68,9 +67,10 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
                   itemBuilder: (context, i) {
                     final r = items[i];
                     final p = r.timeOfDay.split(':').map(int.parse).toList();
-                    final when = formatTime(p[0], p[1]);
+                    final when = s.formatTime(p[0], p[1]);
                     final done = _doneToday.contains(r.id);
-                    final spoken = '$when. ${r.title}${r.note == null ? '' : '. ${r.note}'}';
+                    final prompt = s.voice(r.kind == 'medication' ? 'reminder_medication' : 'reminder_generic', {'title': r.title});
+                    final spoken = '$when. $prompt${r.note == null ? '' : ' ${r.note}'}';
                     return Card(
                       elevation: 0,
                       color: done ? const Color(0xFFE3F4E8) : Theme.of(context).colorScheme.surfaceContainerHigh,

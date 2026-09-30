@@ -7,13 +7,13 @@ import re
 
 import httpx
 
+from .. import language_packs
 from ..config import get_settings
 
 log = logging.getLogger("neuro_sathi.nvidia")
 
 _THINK = re.compile(r"<think>.*?</think>", re.DOTALL)
 
-LANG_NAMES = {"en": "English", "hi": "Hindi", "bn": "Bengali", "as": "Assamese", "ne": "Nepali"}
 # Riva language codes for Canary / Magpie. NER languages are not covered yet (see docs/nvidia-models.md).
 RIVA_LANG = {"en": "en-US", "hi": "hi-IN"}
 
@@ -45,7 +45,7 @@ def _chat(model: str, messages: list[dict], max_tokens: int, temperature: float 
 
 def companion_reply(question: str, language: str) -> str:
     """Sarvam-M. Receives only the question: no names, reminders or health details."""
-    lang = LANG_NAMES.get(language, "English")
+    lang = language_packs.english_name(language)
     system = (
         "You are Sathi, a gentle companion for an elderly person in North-East India. "
         f"Reply in simple {lang} in at most three short sentences. Be warm and patient. "
