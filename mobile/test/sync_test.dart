@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' show Value; // drift also exports isNull/isNotNull, which clash with the test matchers
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_sathi/config.dart';
 import 'package:neuro_sathi/data/api_client.dart';
