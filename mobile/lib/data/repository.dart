@@ -44,18 +44,21 @@ class Repository {
 
   // --- activity ---
 
-  Future<void> logActivity(String kind, [Map<String, Object?> payload = const {}]) async {
+  /// [occurredAt] defaults to now; pass it when recording something after the
+  /// fact (a missed reminder is dated at the time it was due).
+  Future<void> logActivity(String kind, [Map<String, Object?> payload = const {}, DateTime? occurredAt]) async {
     final id = newId();
     final now = DateTime.now();
+    final at = occurredAt ?? now;
     await db.transaction(() async {
       await db.into(db.activityLogs).insert(
-            ActivityLogsCompanion.insert(id: id, kind: kind, payload: Value(jsonEncode(payload)), occurredAt: now),
+            ActivityLogsCompanion.insert(id: id, kind: kind, payload: Value(jsonEncode(payload)), occurredAt: at),
           );
       await _enqueue('activity_log', id, {
         'id': id,
         'kind': kind,
         'payload': payload,
-        'occurred_at': iso(now),
+        'occurred_at': iso(at),
         'updated_at': iso(now),
       });
     });

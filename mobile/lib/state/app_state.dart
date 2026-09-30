@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +10,10 @@ import '../data/repository.dart';
 import '../data/secure_store.dart';
 import '../data/sync_service.dart';
 import '../l10n.dart';
+import '../l10n/load.dart';
+import '../services/background_sync.dart';
 import '../services/notifications.dart';
+import '../services/reminders.dart' as reminders;
 import '../services/voice.dart';
 
 /// Overridden in main() with the opened, encrypted database.
@@ -93,11 +95,8 @@ class AppController extends StateNotifier<AppState> {
   Future<void> start() async {
     final token = await _secure.token();
     ref.read(apiProvider).token = token;
-    var catalog = await LanguageCatalog.load();
-    final downloaded = _downloadedPack(await _db.getValue('language_pack'));
-    if (downloaded != null) catalog = catalog.withDownloaded(downloaded);
-    var language = await _db.getValue('language') ?? 'en';
-    if (!catalog.packs.containsKey(language)) language = 'en';
+    final catalog = await loadCatalog(_db);
+    final language = await storedLanguage(_db, catalog);
     state = state.copyWith(
       ready: true,
       signedIn: token != null,
@@ -116,6 +115,7 @@ class AppController extends StateNotifier<AppState> {
     _conn = connectivity.onConnectivityChanged.listen(_setOnline);
     _timer = Timer.periodic(AppConfig.syncInterval, (_) => syncNow());
     if (state.signedIn) {
+      unawaited(BackgroundSync.schedule());
       await rescheduleReminders();
       await logMissedReminders();
       unawaited(syncNow());
@@ -136,18 +136,20 @@ class AppController extends StateNotifier<AppState> {
       await signOut();
       return;
     }
-    final downloaded = _downloadedPack(await _db.getValue('language_pack'));
+    final downloaded = parseDownloadedPack(await _db.getValue('language_pack'));
     if (downloaded != null) state = state.copyWith(catalog: state.catalog.withDownloaded(downloaded));
+    refreshScreens();
   }
 
-  /// A pack downloaded from the server (a newer published version), if it parses.
-  static LanguagePack? _downloadedPack(String? json) {
-    if (json == null) return null;
-    try {
-      return LanguagePack.fromJson(jsonDecode(json) as Map<String, dynamic>);
-    } on Object {
-      return null; // keep using the bundled pack
-    }
+  /// The background sync worker writes through its own database connection, which
+  /// this isolate's live queries do not see. Re-run them.
+  void refreshScreens() => _db.markTablesUpdated(_db.allTables);
+
+  /// The app came back to the foreground.
+  Future<void> onResumed() async {
+    refreshScreens();
+    await logMissedReminders();
+    await syncNow();
   }
 
   Future<void> signedIn(Map<String, dynamic> tokenResponse) async {
@@ -164,6 +166,7 @@ class AppController extends StateNotifier<AppState> {
       region: user['region'] as String?,
     );
     await ref.read(apiProvider).updateMe({'language': state.language}).catchError((_) {});
+    unawaited(BackgroundSync.schedule());
     await syncNow();
     await rescheduleReminders();
   }
@@ -194,34 +197,15 @@ class AppController extends StateNotifier<AppState> {
 
   Future<void> rescheduleReminders() async {
     final s = state.strings;
-    final reminders = await ref.read(repoProvider).reminders();
-    await ref.read(notificationsProvider).rescheduleAll(
-          reminders,
-          (r) => r.kind == 'medication' ? s.t('medicine_time') : s.t('reminder'),
-        );
+    final list = await ref.read(repoProvider).reminders();
+    await ref.read(notificationsProvider).rescheduleAll(list, (r) => reminders.reminderTitle(s, r));
   }
 
-  /// Logs reminder_missed for today's reminders past the grace window that were
-  /// never marked done (feeds routine adherence on the caregiver dashboard).
-  Future<void> logMissedReminders() async {
-    final repo = ref.read(repoProvider);
-    final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
-    for (final r in await repo.reminders()) {
-      if (!r.active || !daysOf(r).contains(now.weekday - 1)) continue;
-      final parts = r.timeOfDay.split(':').map(int.parse).toList();
-      final due = DateTime(now.year, now.month, now.day, parts[0], parts[1]);
-      if (now.isBefore(due.add(AppConfig.reminderGrace))) continue;
-      bool sameReminder(Map<String, dynamic> p) => p['reminder_id'] == r.id;
-      if (await repo.hasActivity('reminder_done', sameReminder, startOfDay) ||
-          await repo.hasActivity('reminder_missed', sameReminder, startOfDay)) {
-        continue;
-      }
-      await repo.logActivity('reminder_missed', {'reminder_id': r.id, 'kind': r.kind});
-    }
-  }
+  /// Records reminders that went past their grace window without being marked done.
+  Future<void> logMissedReminders() => reminders.logMissedReminders(ref.read(repoProvider), DateTime.now());
 
   Future<void> signOut() async {
+    await BackgroundSync.cancel();
     await _secure.clearToken();
     ref.read(apiProvider).token = null;
     await _db.wipe(); // the phone keeps only the signed-in user's data

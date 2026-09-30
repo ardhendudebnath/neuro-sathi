@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../data/repository.dart';
+import '../services/reminders.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
 
@@ -30,15 +31,18 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final repo = ref.read(repoProvider);
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
+    final date = occurrenceDate(start);
     final done = <String>{};
     for (final r in await repo.reminders()) {
-      if (await repo.hasActivity('reminder_done', (p) => p['reminder_id'] == r.id, start)) done.add(r.id);
+      if (await repo.hasActivity('reminder_done', (p) => p['reminder_id'] == r.id && p['date'] == date, start)) done.add(r.id);
     }
     if (mounted) setState(() => _doneToday.addAll(done));
   }
 
   Future<void> _markDone(ReminderRow r) async {
-    await ref.read(repoProvider).logActivity('reminder_done', {'reminder_id': r.id, 'kind': r.kind});
+    // The date ties this to today's occurrence, so it is not also logged as missed.
+    final date = occurrenceDate(DateTime.now());
+    await ref.read(repoProvider).logActivity('reminder_done', {'reminder_id': r.id, 'kind': r.kind, 'date': date});
     setState(() => _doneToday.add(r.id));
     ref.read(voiceProvider).speak(ref.read(stringsProvider).t('well_done'));
   }

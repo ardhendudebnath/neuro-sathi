@@ -7,6 +7,13 @@ class AppConfig {
   /// How often to try syncing while the app is open.
   static const syncInterval = Duration(minutes: 15);
 
+  /// How often the background worker syncs while the app is closed. Android
+  /// runs it only when there is a connection, and may delay it to save battery.
+  static const backgroundSyncInterval = Duration(hours: 1);
+
+  /// A sync lock older than this belongs to a run that was killed; take it over.
+  static const syncLockTtl = Duration(minutes: 10);
+
   /// A reminder not marked done within this window is logged as missed.
   static const reminderGrace = Duration(hours: 2);
 }

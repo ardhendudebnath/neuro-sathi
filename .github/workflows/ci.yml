@@ -96,6 +96,8 @@ jobs:
         with: {channel: stable, cache: true}
       - run: ./tool/bootstrap.sh
       - run: flutter analyze --no-fatal-infos
+      - name: SQLite for the in-memory database tests
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
       - run: flutter test
       - run: flutter build apk --debug --dart-define=API_BASE_URL=https://api.example.invalid
       - name: Scan the APK for secrets
