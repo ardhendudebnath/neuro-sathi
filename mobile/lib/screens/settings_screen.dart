@@ -72,6 +72,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  /// Signing out removes this person's data from the phone, so upload first and
+  /// warn if something still could not be sent.
+  Future<void> _signOut() async {
+    final ctrl = ref.read(appProvider.notifier);
+    final s = ref.read(stringsProvider);
+    await ctrl.syncNow();
+    final pending = await ctrl.unsyncedCount();
+    if (!mounted) return;
+    if (pending > 0) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          content: Text(s.t('sign_out_unsynced')),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(dialog).pop(false), child: Text(s.t('no'))),
+            TextButton(onPressed: () => Navigator.of(dialog).pop(true), child: Text(s.t('yes'))),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    await ctrl.signOut();
+    if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = ref.watch(appProvider);
@@ -149,13 +174,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: Text(s.t('voice_consent_help')),
           ),
           const SizedBox(height: 24),
-          OutlinedButton(
-            onPressed: () async {
-              await ctrl.signOut();
-              if (context.mounted) Navigator.of(context).popUntil((r) => r.isFirst);
-            },
-            child: Text(s.t('sign_out')),
-          ),
+          OutlinedButton(onPressed: _signOut, child: Text(s.t('sign_out'))),
           const SizedBox(height: 24),
           Text(_lastSyncText(s), style: text.bodyMedium),
           const SizedBox(height: 12),

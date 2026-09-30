@@ -6,6 +6,7 @@ import '../data/repository.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
 import 'games_screen.dart';
+import 'login_screen.dart';
 import 'memories_screen.dart';
 import 'reminders_screen.dart';
 import 'sathi_screen.dart';
@@ -36,6 +37,7 @@ class HomeScreen extends ConsumerWidget {
       body: Column(
         children: [
           const OfflineBanner(),
+          const _SignInAgainBanner(),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -130,6 +132,42 @@ class _NextReminderCard extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Shown when the server has ended the session. The app keeps working with the
+/// data on the phone; this only asks the user to verify their number again so
+/// their activity reaches their family.
+class _SignInAgainBanner extends ConsumerWidget {
+  const _SignInAgainBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(appProvider.select((a) => a.sessionExpired))) return const SizedBox.shrink();
+    final s = ref.watch(stringsProvider);
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFE3F0FF),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(s.t('session_expired'), style: Theme.of(context).textTheme.bodyLarge)),
+              SpeakButton(s.t('session_expired')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const LoginScreen(reauth: true)),
+            ),
+            child: Text(s.t('sign_in_again')),
+          ),
+        ],
+      ),
     );
   }
 }

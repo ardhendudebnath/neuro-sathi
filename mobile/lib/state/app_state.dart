@@ -27,6 +27,7 @@ class AppState {
   const AppState({
     this.ready = false,
     this.signedIn = false,
+    this.sessionExpired = false,
     this.userId,
     this.name,
     this.language = 'en',
@@ -37,7 +38,13 @@ class AppState {
   });
 
   final bool ready;
+
+  /// This phone holds someone's account and data.
   final bool signedIn;
+
+  /// The server ended the session. The app keeps working offline with the data on
+  /// the phone; syncing resumes once the user verifies their number again.
+  final bool sessionExpired;
   final String? userId;
   final String? name;
   final String language;
@@ -52,6 +59,7 @@ class AppState {
   AppState copyWith({
     bool? ready,
     bool? signedIn,
+    bool? sessionExpired,
     String? userId,
     String? name,
     String? language,
@@ -63,6 +71,7 @@ class AppState {
       AppState(
         ready: ready ?? this.ready,
         signedIn: signedIn ?? this.signedIn,
+        sessionExpired: sessionExpired ?? this.sessionExpired,
         userId: userId ?? this.userId,
         name: name ?? this.name,
         language: language ?? this.language,
@@ -93,13 +102,19 @@ class AppController extends StateNotifier<AppState> {
   AppDb get _db => ref.read(dbProvider);
 
   Future<void> start() async {
-    final token = await _secure.token();
-    ref.read(apiProvider).token = token;
+    final api = ref.read(apiProvider)
+      ..token = await _secure.token()
+      ..accessExpiresAt = await _secure.accessExpiresAt()
+      ..refreshToken = await _secure.refreshToken()
+      ..onAccessRenewed = _secure.saveAccess
+      ..onSessionExpired = _onSessionExpired;
+    final hasAccount = await _db.getValue('user_id') != null;
     final catalog = await loadCatalog(_db);
     final language = await storedLanguage(_db, catalog);
     state = state.copyWith(
       ready: true,
-      signedIn: token != null,
+      signedIn: hasAccount,
+      sessionExpired: hasAccount && !api.hasSession,
       userId: await _db.getValue('user_id'),
       name: await _db.getValue('name'),
       language: language,
@@ -130,16 +145,29 @@ class AppController extends StateNotifier<AppState> {
   }
 
   Future<void> syncNow() async {
-    if (!state.signedIn) return;
+    if (!state.signedIn || state.sessionExpired) return;
     final outcome = await _sync.syncNow();
-    if (outcome == SyncOutcome.signedOut) {
-      await signOut();
+    if (outcome == SyncOutcome.sessionExpired) {
+      await _onSessionExpired();
       return;
     }
     final downloaded = parseDownloadedPack(await _db.getValue('language_pack'));
     if (downloaded != null) state = state.copyWith(catalog: state.catalog.withDownloaded(downloaded));
     refreshScreens();
   }
+
+  /// The server would not renew the session (unused for months, or ended from
+  /// another device). Everything stays on the phone and the app keeps working
+  /// offline; the home screen asks the user to sign in again, and the queued
+  /// activity is uploaded after that.
+  Future<void> _onSessionExpired() async {
+    await _secure.clearSession();
+    ref.read(apiProvider).clearSession();
+    if (mounted) state = state.copyWith(sessionExpired: true);
+  }
+
+  /// Changes recorded on this phone that the server does not have yet.
+  Future<int> unsyncedCount() => ref.read(repoProvider).queuedCount();
 
   /// The background sync worker writes through its own database connection, which
   /// this isolate's live queries do not see. Re-run them.
@@ -152,16 +180,35 @@ class AppController extends StateNotifier<AppState> {
     await syncNow();
   }
 
+  /// Called after the code is verified: a first sign-in, or signing in again after
+  /// the session expired (the data on the phone is kept and syncing resumes).
   Future<void> signedIn(Map<String, dynamic> tokenResponse) async {
     final user = tokenResponse['user'] as Map<String, dynamic>;
-    await _secure.setToken(tokenResponse['access_token'] as String);
-    ref.read(apiProvider).token = tokenResponse['access_token'] as String;
-    await _db.setValue('user_id', user['id'] as String);
+    final userId = user['id'] as String;
+    final previous = await _db.getValue('user_id');
+    if (previous != null && previous != userId) {
+      // A different person is signing in: this phone keeps only the signed-in user's data.
+      await _db.wipe();
+      await _db.setValue('language', state.language);
+      await _db.setValue('font_scale', '${state.fontScale}');
+      state = AppState(ready: true, language: state.language, online: state.online, fontScale: state.fontScale, catalog: state.catalog);
+    }
+    final access = tokenResponse['access_token'] as String;
+    final expiresAt = DateTime.now().add(Duration(seconds: tokenResponse['expires_in'] as int));
+    final refresh = tokenResponse['refresh_token'] as String?;
+    await _secure.saveSession(access: access, expiresAt: expiresAt, refresh: refresh);
+    ref.read(apiProvider)
+      ..token = access
+      ..accessExpiresAt = expiresAt
+      ..refreshToken = refresh;
+    await _db.setValue('user_id', userId);
+    await _db.setValue('phone', user['phone'] as String);
     if (user['name'] != null) await _db.setValue('name', user['name'] as String);
     if (user['region'] != null) await _db.setValue('region', user['region'] as String);
     state = state.copyWith(
       signedIn: true,
-      userId: user['id'] as String,
+      sessionExpired: false,
+      userId: userId,
       name: user['name'] as String?,
       region: user['region'] as String?,
     );
@@ -204,10 +251,17 @@ class AppController extends StateNotifier<AppState> {
   /// Records reminders that went past their grace window without being marked done.
   Future<void> logMissedReminders() => reminders.logMissedReminders(ref.read(repoProvider), DateTime.now());
 
+  /// The user chose to sign out: ends the session on the server and removes their
+  /// data from this phone. An expired session never comes here (see _onSessionExpired).
   Future<void> signOut() async {
     await BackgroundSync.cancel();
-    await _secure.clearToken();
-    ref.read(apiProvider).token = null;
+    try {
+      await ref.read(apiProvider).logout();
+    } on Object {
+      // Offline or already ended: the session expires on the server by itself.
+    }
+    await _secure.clearSession();
+    ref.read(apiProvider).clearSession();
     await _db.wipe(); // the phone keeps only the signed-in user's data
     await ref.read(notificationsProvider).rescheduleAll(const [], (_) => '');
     state = AppState(ready: true, language: state.language, online: state.online, fontScale: state.fontScale, catalog: state.catalog);

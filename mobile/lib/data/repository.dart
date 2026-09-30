@@ -64,6 +64,13 @@ class Repository {
     });
   }
 
+  /// Changes recorded on the phone that have not reached the server yet.
+  Future<int> queuedCount() async {
+    final count = db.syncQueue.seq.count();
+    final row = await (db.selectOnly(db.syncQueue)..addColumns([count])).getSingle();
+    return row.read(count) ?? 0;
+  }
+
   Future<bool> hasActivity(String kind, bool Function(Map<String, dynamic> payload) match, DateTime since) async {
     final rows = await (db.select(db.activityLogs)
           ..where((t) => t.kind.equals(kind) & t.occurredAt.isBiggerOrEqualValue(since)))
