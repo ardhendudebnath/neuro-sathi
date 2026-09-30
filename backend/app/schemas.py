@@ -1,13 +1,23 @@
 from datetime import date, datetime, time
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
 
+from . import language_packs
 from .models import Role
 
 PHONE_PATTERN = r"^\+?[1-9]\d{9,14}$"
-Lang = Literal["en", "hi", "as", "bn", "mni", "brx", "kha", "lus", "ne"]  # progressively added
+
+
+def _known_language(code: str) -> str:
+    if code not in language_packs.supported():
+        raise ValueError(f"unsupported language '{code}'")
+    return code
+
+
+# Any language with a pack in content/language-packs (preview packs included, for testing).
+Lang = Annotated[str, AfterValidator(_known_language)]
 
 
 class ORM(BaseModel):
@@ -277,14 +287,20 @@ class LanguagePackOut(ORM):
     version: int
     strings: dict
     voice_prompts: dict
+    document: dict  # the full pack: strings, voice prompts, days, time format, Sathi, game content
     updated_at: datetime
 
 
+class LanguageOut(BaseModel):
+    code: str
+    english_name: str
+    native_name: str
+    script: str
+    version: int
+
+
 class LanguagePackUpsert(BaseModel):
-    language: str = Field(max_length=8)
-    version: int = Field(ge=1)
-    strings: dict
-    voice_prompts: dict = Field(default_factory=dict)
+    document: dict  # same format as content/language-packs/*.json
     published: bool = False
 
 

@@ -60,6 +60,9 @@ class Settings(BaseSettings):
 
     firebase_credentials_file: str | None = None  # Firebase Admin, for caregiver push alerts
 
+    # content/language-packs in the repo by default; the Docker image sets it explicitly.
+    language_packs_dir: str | None = None
+
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     public_base_url: str = "http://localhost:8000"
 

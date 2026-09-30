@@ -138,6 +138,7 @@ class LanguagePack(Base):
     version: Mapped[int] = mapped_column(Integer)
     strings: Mapped[dict] = mapped_column(default=dict)
     voice_prompts: Mapped[dict] = mapped_column(default=dict)
+    document: Mapped[dict] = mapped_column(default=dict)  # the full pack as in content/language-packs
     published: Mapped[bool] = mapped_column(Boolean, default=False)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow)
 

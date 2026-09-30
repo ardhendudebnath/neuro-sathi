@@ -6,6 +6,7 @@ from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import language_packs
 from ..config import get_settings
 from ..deps import Actor, DbDep, require_roles
 from ..models import ActivityLog, MemoryBookEntry, Profile, Reminder, Role, utcnow
@@ -25,7 +26,7 @@ def ask(body: SathiAsk, actor: ElderlyUser, db: DbDep) -> SathiAnswer:
     local = answer_locally(body.question, body.language, reminders, entries)
     if local is not None:
         answer = SathiAnswer(answer=local.text, source="local")
-    elif not nvidia.enabled() or budget.over_budget(db):
+    elif not nvidia.enabled() or not language_packs.llm_supported(body.language) or budget.over_budget(db):
         answer = SathiAnswer(answer=t(body.language, "fallback"), source="offline_fallback")
     else:
         answer = _ask_llm(body, db)

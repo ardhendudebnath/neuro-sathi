@@ -1,4 +1,4 @@
-"""Seed starter content (games, NER cultural items, en/hi language packs).
+"""Seed starter content (games, NER cultural items, language packs from content/language-packs).
 
     python -m app.seed                      # content only, safe to re-run
     python -m app.seed --admin +91XXXXXXXXXX  # also make that phone an admin
@@ -9,6 +9,7 @@ import argparse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from . import language_packs
 from .db import service_session
 from .models import CulturalContent, Game, LanguagePack, Profile, Role, User, utcnow
 
@@ -54,22 +55,6 @@ CULTURAL = [
     ("all", "object", "Umbrella", {"note": "Needed in the rainy season"}),
 ]
 
-EN = {
-    "app_name": "NEURO-SATHI", "greeting_morning": "Good morning", "greeting_evening": "Good evening",
-    "play": "Play", "memories": "Memories", "reminders": "Reminders", "talk_to_sathi": "Talk to Sathi",
-    "done": "Done", "later": "Later", "well_done": "Well done!", "try_again": "Let's try again",
-    "next": "Next", "back": "Back", "yes": "Yes", "no": "No", "offline": "Offline - everything is saved",
-}
-HI = {
-    "app_name": "न्यूरो-साथी", "greeting_morning": "सुप्रभात", "greeting_evening": "शुभ संध्या",
-    "play": "खेलें", "memories": "यादें", "reminders": "याद दिलाना", "talk_to_sathi": "साथी से बात करें",
-    "done": "हो गया", "later": "बाद में", "well_done": "बहुत बढ़िया!", "try_again": "फिर से कोशिश करें",
-    "next": "आगे", "back": "पीछे", "yes": "हाँ", "no": "नहीं", "offline": "ऑफ़लाइन - सब कुछ सुरक्षित है",
-}
-VOICE_EN = {"reminder_medication": "It is time for your medicine: {title}.", "reminder_generic": "Reminder: {title}."}
-VOICE_HI = {"reminder_medication": "दवा का समय हो गया है: {title}।", "reminder_generic": "याद दिलाना: {title}।"}
-
-
 def seed_content(db: Session) -> None:
     for g in GAMES:
         if db.scalar(select(Game).where(Game.slug == g["slug"])) is None:
@@ -78,9 +63,31 @@ def seed_content(db: Session) -> None:
     for region, category, title, data in CULTURAL:
         if (region, title) not in existing:
             db.add(CulturalContent(region=region, language="en", category=category, title=title, data=data, updated_at=utcnow()))
-    for lang, strings, voice in (("en", EN, VOICE_EN), ("hi", HI, VOICE_HI)):
-        if db.scalar(select(LanguagePack).where(LanguagePack.language == lang, LanguagePack.version == 1)) is None:
-            db.add(LanguagePack(language=lang, version=1, strings=strings, voice_prompts=voice, published=True))
+    seed_language_packs(db)
+
+
+def seed_language_packs(db: Session) -> None:
+    """Import content/language-packs/*.json. The files are the source of truth: re-seeding
+    updates the same version, and only packs released as "public" are published."""
+    reference = language_packs.pack(language_packs.SOURCE)
+    for code, doc in language_packs.load_packs().items():
+        errors, _ = language_packs.validate(doc, reference)
+        if errors:
+            print(f"skipping language pack {code}: {errors[0]}")
+            continue
+        fields = {
+            "strings": doc["strings"],
+            "voice_prompts": doc["voice_prompts"],
+            "document": doc,
+            "published": doc["meta"]["release"] == "public",
+            "updated_at": utcnow(),
+        }
+        row = db.scalar(select(LanguagePack).where(LanguagePack.language == code, LanguagePack.version == doc["version"]))
+        if row is None:
+            db.add(LanguagePack(language=code, version=doc["version"], **fields))
+        else:
+            for key, value in fields.items():
+                setattr(row, key, value)
 
 
 def make_admin(db: Session, phone: str) -> None:
