@@ -31,7 +31,7 @@ class AppState {
     this.region,
     this.fontScale = 1.4,
     this.online = false,
-    this.pack = const {},
+    this.catalog = LanguageCatalog.none,
   });
 
   final bool ready;
@@ -42,9 +42,10 @@ class AppState {
   final String? region;
   final double fontScale;
   final bool online;
-  final Map<String, String> pack;
+  final LanguageCatalog catalog;
 
-  Strings get strings => Strings(language, pack);
+  LanguagePack get currentPack => catalog.pack(language);
+  Strings get strings => Strings(currentPack, catalog.english);
 
   AppState copyWith({
     bool? ready,
@@ -55,7 +56,7 @@ class AppState {
     String? region,
     double? fontScale,
     bool? online,
-    Map<String, String>? pack,
+    LanguageCatalog? catalog,
   }) =>
       AppState(
         ready: ready ?? this.ready,
@@ -66,7 +67,7 @@ class AppState {
         region: region ?? this.region,
         fontScale: fontScale ?? this.fontScale,
         online: online ?? this.online,
-        pack: pack ?? this.pack,
+        catalog: catalog ?? this.catalog,
       );
 }
 
@@ -92,18 +93,22 @@ class AppController extends StateNotifier<AppState> {
   Future<void> start() async {
     final token = await _secure.token();
     ref.read(apiProvider).token = token;
-    final packJson = await _db.getValue('language_pack');
+    var catalog = await LanguageCatalog.load();
+    final downloaded = _downloadedPack(await _db.getValue('language_pack'));
+    if (downloaded != null) catalog = catalog.withDownloaded(downloaded);
+    var language = await _db.getValue('language') ?? 'en';
+    if (!catalog.packs.containsKey(language)) language = 'en';
     state = state.copyWith(
       ready: true,
       signedIn: token != null,
       userId: await _db.getValue('user_id'),
       name: await _db.getValue('name'),
-      language: await _db.getValue('language') ?? 'en',
+      language: language,
       region: await _db.getValue('region'),
       fontScale: double.tryParse(await _db.getValue('font_scale') ?? '') ?? 1.4,
-      pack: packJson == null ? const {} : (jsonDecode(packJson) as Map<String, dynamic>).cast<String, String>(),
+      catalog: catalog,
     );
-    await ref.read(voiceProvider).setLanguage(state.language);
+    await ref.read(voiceProvider).setLanguage(state.currentPack);
     await ref.read(notificationsProvider).init((_) {});
 
     final connectivity = Connectivity();
@@ -131,9 +136,17 @@ class AppController extends StateNotifier<AppState> {
       await signOut();
       return;
     }
-    final packJson = await _db.getValue('language_pack');
-    if (packJson != null) {
-      state = state.copyWith(pack: (jsonDecode(packJson) as Map<String, dynamic>).cast<String, String>());
+    final downloaded = _downloadedPack(await _db.getValue('language_pack'));
+    if (downloaded != null) state = state.copyWith(catalog: state.catalog.withDownloaded(downloaded));
+  }
+
+  /// A pack downloaded from the server (a newer published version), if it parses.
+  static LanguagePack? _downloadedPack(String? json) {
+    if (json == null) return null;
+    try {
+      return LanguagePack.fromJson(jsonDecode(json) as Map<String, dynamic>);
+    } on Object {
+      return null; // keep using the bundled pack
     }
   }
 
@@ -159,8 +172,8 @@ class AppController extends StateNotifier<AppState> {
     await _db.setValue('language', language);
     await _db.removeValue('language_pack');
     await _db.removeValue('content_refreshed_at');
-    state = state.copyWith(language: language, pack: const {});
-    await ref.read(voiceProvider).setLanguage(language);
+    state = state.copyWith(language: language);
+    await ref.read(voiceProvider).setLanguage(state.currentPack);
     if (state.signedIn) {
       unawaited(ref.read(apiProvider).updateMe({'language': language}).catchError((_) {}));
       await rescheduleReminders();
@@ -213,7 +226,7 @@ class AppController extends StateNotifier<AppState> {
     ref.read(apiProvider).token = null;
     await _db.wipe(); // the phone keeps only the signed-in user's data
     await ref.read(notificationsProvider).rescheduleAll(const [], (_) => '');
-    state = AppState(ready: true, language: state.language, online: state.online, fontScale: state.fontScale);
+    state = AppState(ready: true, language: state.language, online: state.online, fontScale: state.fontScale, catalog: state.catalog);
     await _db.setValue('language', state.language);
   }
 

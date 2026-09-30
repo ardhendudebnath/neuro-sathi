@@ -87,9 +87,13 @@ class GamesScreen extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(g.name, style: Theme.of(context).textTheme.titleLarge),
+                                  Text(s.gameName(g.slug, g.name), style: Theme.of(context).textTheme.titleLarge),
                                   if (i < 2 && g.reason != null)
-                                    Text('${s.t('suggested_for_you')} · ${g.reason}', style: Theme.of(context).textTheme.bodyMedium),
+                                    Text(
+                                      // Recommendation reasons come from the server in English.
+                                      s.language == 'en' ? '${s.t('suggested_for_you')} · ${g.reason}' : s.t('suggested_for_you'),
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
                                 ],
                               ),
                             ),

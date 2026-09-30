@@ -17,9 +17,13 @@ Speech uses NVIDIA's hosted Riva gRPC endpoint and needs the optional `nvidia-ri
 - Audio goes to the cloud only after the user turns on "Allow cloud voice". By default the app uses on-device speech recognition.
 - The server stores which answer path was used (local, LLM, fallback, safety block), not the question.
 
+## Language coverage
+
+Each language pack says whether the hosted companion model supports it (`meta.llm` in `content/language-packs`). Sarvam-M covers Hindi and Bengali but not Assamese or Nepali, so for those Sathi answers everyday questions from the pack and gives its scripted fallback for anything else, instead of sending the question to a model that cannot answer in the user's language.
+
 ## Known gap
 
-None of these hosted models covers Assamese, Manipuri (Meitei), Bodo or other NER languages yet. Options to evaluate:
+None of these hosted models covers Assamese, Nepali, Manipuri (Meitei), Bodo or other NER languages yet. Options to evaluate:
 
 - self-hosting Whisper Large V3 (covers Assamese and Bengali) on an India-region GPU server;
 - Bhashini / AI4Bharat models (IndicTrans2, IndicConformer, Indic Parler-TTS) for NER languages.

@@ -25,6 +25,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool busy = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Nothing to choose when only one language is available in this build.
+    if (ref.read(appProvider).catalog.visible.length <= 1) step = _Step.phone;
+  }
+
+  @override
   void dispose() {
     phone.dispose();
     code.dispose();
@@ -40,9 +47,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await action();
     } on OfflineException {
-      setState(() => error = 'No internet. Please connect once to sign in; after that the app works offline.');
+      setState(() => error = ref.read(stringsProvider).t('error_no_internet'));
     } on ApiException catch (e) {
-      setState(() => error = e.message);
+      final s = ref.read(stringsProvider);
+      setState(() => error = switch (e.status) {
+            401 => s.t('error_wrong_code'),
+            429 => s.t('error_try_later'),
+            _ => s.t('error_generic'),
+          });
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -95,21 +107,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  List<Widget> _languageStep(Strings s) => [
-        Text('${Strings('en').t('choose_language')} / ${Strings('hi').t('choose_language')}',
-            style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 24),
-        for (final entry in Strings.supported.entries) ...[
-          FilledButton(
-            onPressed: () async {
-              await ref.read(appProvider.notifier).setLanguage(entry.key);
-              setState(() => step = _Step.phone);
-            },
-            child: Text(entry.value, style: const TextStyle(fontSize: 26)),
+  /// Each language is shown in its own script, with its English name underneath.
+  List<Widget> _languageStep(Strings s) {
+    final languages = ref.read(appProvider).catalog.visible;
+    return [
+      for (final p in languages)
+        Text(p.strings['choose_language'] ?? 'Choose your language', style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 24),
+      for (final p in languages) ...[
+        FilledButton(
+          onPressed: () async {
+            await ref.read(appProvider.notifier).setLanguage(p.code);
+            setState(() => step = _Step.phone);
+          },
+          child: Column(
+            children: [
+              Text(p.nativeName, style: const TextStyle(fontSize: 28)),
+              if (p.nativeName != p.englishName) Text(p.englishName, style: const TextStyle(fontSize: 16)),
+            ],
           ),
-          const SizedBox(height: 16),
-        ],
-      ];
+        ),
+        const SizedBox(height: 16),
+      ],
+    ];
+  }
 
   List<Widget> _phoneStep(Strings s) => [
         Text(s.t('enter_phone'), style: Theme.of(context).textTheme.headlineMedium),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
+import '../l10n.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
 
@@ -11,10 +12,10 @@ import '../widgets/common.dart';
 class MemoriesScreen extends ConsumerWidget {
   const MemoriesScreen({super.key});
 
-  static String describe(MemoryEntry m, String language) {
+  static String describe(MemoryEntry m, Strings s) {
     final name = m.personName ?? m.title;
     final parts = <String>[
-      if (m.relationship != null) (language == 'hi' ? '$name, आपके ${m.relationship}' : '$name, your ${m.relationship}') else name,
+      if (m.relationship != null) s.t('memory_person', {'name': name, 'relationship': m.relationship!}) else name,
       if (m.place != null) m.place!,
       if (m.description != null) m.description!,
     ];
@@ -24,7 +25,6 @@ class MemoriesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
-    final lang = ref.watch(appProvider.select((a) => a.language));
     return Scaffold(
       appBar: AppBar(title: Text(s.t('memories'))),
       body: StreamBuilder<List<MemoryEntry>>(
@@ -45,7 +45,7 @@ class MemoriesScreen extends ConsumerWidget {
             controller: PageController(viewportFraction: 0.92),
             itemBuilder: (context, i) {
               final m = items[i];
-              final text = describe(m, lang);
+              final text = describe(m, s);
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 20),
                 child: Card(

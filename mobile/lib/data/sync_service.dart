@@ -129,7 +129,7 @@ class SyncService {
     }
   }
 
-  /// Games, NER cultural content and the language pack, refreshed at most daily.
+  /// Games, NER cultural content and the published language pack, refreshed at most daily.
   Future<void> _refreshContentIfStale() async {
     final last = DateTime.tryParse(await db.getValue('content_refreshed_at') ?? '');
     if (last != null && DateTime.now().difference(last) < const Duration(days: 1)) return;
@@ -139,9 +139,10 @@ class SyncService {
     await repo.replaceCultural(await api.cultural(region, 'en'));
     try {
       final pack = await api.languagePack(language);
-      await db.setValue('language_pack', jsonEncode(pack['strings']));
+      await db.setValue('language_pack', jsonEncode(pack['document']));
     } on ApiException catch (e) {
       if (e.status != 404) rethrow;
+      await db.removeValue('language_pack'); // not published (e.g. a preview pack): use the bundled one
     }
     await db.setValue('content_refreshed_at', DateTime.now().toIso8601String());
   }

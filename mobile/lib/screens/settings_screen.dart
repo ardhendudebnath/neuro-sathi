@@ -5,16 +5,8 @@ import '../data/api_client.dart';
 import '../l10n.dart';
 import '../state/app_state.dart';
 
-const _regions = {
-  'assam': 'Assam',
-  'arunachal': 'Arunachal Pradesh',
-  'manipur': 'Manipur',
-  'meghalaya': 'Meghalaya',
-  'mizoram': 'Mizoram',
-  'nagaland': 'Nagaland',
-  'sikkim': 'Sikkim',
-  'tripura': 'Tripura',
-};
+// State names come from the language pack (regions section).
+const _regions = ['assam', 'arunachal', 'manipur', 'meghalaya', 'mizoram', 'nagaland', 'sikkim', 'tripura'];
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -44,21 +36,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       setState(() => _linkCode = code);
       // Read it slowly, letter by letter.
       await ref.read(voiceProvider).speak(code.split('').join(', '));
-    } on OfflineException {
-      setState(() => _error = 'Please connect to the internet to create a code.');
-    } on ApiException catch (e) {
-      setState(() => _error = e.message);
+    } on Exception catch (e) {
+      setState(() => _error = _errorText(e));
     }
+  }
+
+  String _errorText(Exception e) {
+    final s = ref.read(stringsProvider);
+    if (e is OfflineException) return s.t('error_needs_internet');
+    if (e is ApiException && e.status == 429) return s.t('error_try_later');
+    return s.t('error_generic');
   }
 
   Future<void> _setVoiceConsent(bool value) async {
     try {
       await ref.read(apiProvider).updateProfile({'voice_consent': value});
       setState(() => _voiceConsent = value);
-    } on OfflineException {
-      setState(() => _error = 'Please connect to the internet to change this.');
-    } on ApiException catch (e) {
-      setState(() => _error = e.message);
+    } on Exception catch (e) {
+      setState(() => _error = _errorText(e));
     }
   }
 
@@ -68,6 +63,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final s = app.strings;
     final ctrl = ref.read(appProvider.notifier);
     final text = Theme.of(context).textTheme;
+    final List<LanguagePack> languages = [
+      ...app.catalog.visible,
+      // Keep the current language selectable even if this build no longer offers it.
+      if (!app.catalog.visible.any((p) => p.code == app.language)) app.currentPack,
+    ];
     return Scaffold(
       appBar: AppBar(title: Text(s.t('settings'))),
       body: ListView(
@@ -76,10 +76,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
           Text(s.t('choose_language'), style: text.titleLarge),
           const SizedBox(height: 8),
-          SegmentedButton<String>(
-            segments: [for (final e in Strings.supported.entries) ButtonSegment(value: e.key, label: Text(e.value))],
-            selected: {app.language},
-            onSelectionChanged: (v) => ctrl.setLanguage(v.first),
+          DropdownButtonFormField<String>(
+            initialValue: app.language,
+            isExpanded: true,
+            items: [
+              for (final p in languages)
+                DropdownMenuItem(
+                  value: p.code,
+                  child: Text(p.nativeName == p.englishName ? p.nativeName : '${p.nativeName}  (${p.englishName})'),
+                ),
+            ],
+            onChanged: (v) => v == null ? null : ctrl.setLanguage(v),
           ),
           const SizedBox(height: 24),
           Text(s.t('text_size'), style: text.titleLarge),
@@ -93,9 +100,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            initialValue: app.region,
-            decoration: const InputDecoration(labelText: 'State / Region'),
-            items: [for (final e in _regions.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+            initialValue: _regions.contains(app.region) ? app.region : null,
+            decoration: InputDecoration(labelText: s.t('region')),
+            items: [for (final code in _regions) DropdownMenuItem(value: code, child: Text(s.region(code)))],
             onChanged: (v) => v == null ? null : ctrl.setRegion(v),
           ),
           const SizedBox(height: 24),
@@ -135,10 +142,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Text(s.t('sign_out')),
           ),
           const SizedBox(height: 24),
-          Text(
-            'NEURO-SATHI supports memory and daily routines. It does not diagnose. Please see a doctor for health concerns.',
-            style: text.bodyMedium,
-          ),
+          Text(s.t('disclaimer'), style: text.bodyMedium),
         ],
       ),
     );

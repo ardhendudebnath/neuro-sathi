@@ -47,12 +47,22 @@ class SpeakButton extends ConsumerWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => IconButton.filledTonal(
-        iconSize: 32,
-        tooltip: 'Read aloud',
-        onPressed: () => ref.read(voiceProvider).speak(text),
-        icon: const Icon(Icons.volume_up_rounded),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
+    return IconButton.filledTonal(
+      iconSize: 32,
+      tooltip: s.t('read_aloud'),
+      onPressed: () {
+        final voice = ref.read(voiceProvider);
+        if (!voice.canSpeak) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(s.t('voice_unavailable'))));
+          return;
+        }
+        voice.speak(text);
+      },
+      icon: const Icon(Icons.volume_up_rounded),
+    );
+  }
 }
 
 class OfflineBanner extends ConsumerWidget {
