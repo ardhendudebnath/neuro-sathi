@@ -19,6 +19,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _linkCode;
   String? _error;
   bool _voiceConsent = false;
+  DateTime? _lastSync;
 
   @override
   void initState() {
@@ -26,6 +27,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.read(apiProvider).profile().then((p) {
       if (mounted) setState(() => _voiceConsent = p['voice_consent'] == true);
     }).catchError((Object _) {}); // offline: keep the safe default (off)
+    // Written by both the app and the background sync worker.
+    ref.read(dbProvider).getValue('last_sync_at').then((v) {
+      final at = v == null ? null : DateTime.tryParse(v)?.toLocal();
+      if (mounted && at != null) setState(() => _lastSync = at);
+    }).catchError((Object _) {});
+  }
+
+  String _lastSyncText(Strings s) {
+    final at = _lastSync;
+    if (at == null) return s.t('never_synced');
+    final now = DateTime.now();
+    final time = s.formatTime(at.hour, at.minute);
+    final today = at.year == now.year && at.month == now.month && at.day == now.day;
+    return s.t('last_synced', {'time': today ? time : '${s.pack.localizeDigits('${at.day}/${at.month}')}, $time'});
   }
 
   Future<void> _getLinkCode() async {
@@ -142,6 +157,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Text(s.t('sign_out')),
           ),
           const SizedBox(height: 24),
+          Text(_lastSyncText(s), style: text.bodyMedium),
+          const SizedBox(height: 12),
           Text(s.t('disclaimer'), style: text.bodyMedium),
         ],
       ),

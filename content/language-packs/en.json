@@ -1,6 +1,6 @@
 {
   "language": "en",
-  "version": 1,
+  "version": 2,
   "meta": {
     "english_name": "English",
     "native_name": "English",
@@ -75,7 +75,9 @@
     "error_try_later": "Too many tries. Please wait a little and try again.",
     "error_generic": "Something went wrong. Please try again.",
     "disclaimer": "NEURO-SATHI supports memory and daily routines. It does not diagnose. Please see a doctor for health concerns.",
-    "voice_unavailable": "Voice is not available for this language on this phone."
+    "voice_unavailable": "Voice is not available for this language on this phone.",
+    "last_synced": "Last synced: {time}",
+    "never_synced": "Not synced yet"
   },
   "voice_prompts": {
     "reminder_medication": "It is time for your medicine: {title}.",
