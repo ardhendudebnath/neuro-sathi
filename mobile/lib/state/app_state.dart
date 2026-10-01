@@ -108,6 +108,10 @@ class AppController extends StateNotifier<AppState> {
       ..refreshToken = await _secure.refreshToken()
       ..onAccessRenewed = _secure.saveAccess
       ..onSessionExpired = _onSessionExpired;
+    if (AppConfig.testerBuild) {
+      final server = await _db.getValue('api_base_url');
+      if (server != null) api.baseUrl = server;
+    }
     final hasAccount = await _db.getValue('user_id') != null;
     final catalog = await loadCatalog(_db);
     final language = await storedLanguage(_db, catalog);
@@ -166,6 +170,29 @@ class AppController extends StateNotifier<AppState> {
     if (mounted) state = state.copyWith(sessionExpired: true);
   }
 
+  /// The backend this app talks to.
+  String get serverUrl => ref.read(apiProvider).baseUrl;
+
+  /// Tester builds only: point the app at another backend, such as a laptop on
+  /// the same Wi-Fi. Returns false if the address is not usable.
+  Future<bool> setServer(String input) async {
+    if (!AppConfig.testerBuild) return false;
+    final url = AppConfig.normalizeServerUrl(input);
+    if (url == null) return false;
+    await _db.setValue('api_base_url', url);
+    ref.read(apiProvider).baseUrl = url;
+    return true;
+  }
+
+  /// Wipes this person's data but keeps device settings that are not personal.
+  Future<void> _wipeKeepingDeviceSettings() async {
+    final server = await _db.getValue('api_base_url');
+    await _db.wipe();
+    await _db.setValue('language', state.language);
+    await _db.setValue('font_scale', '${state.fontScale}');
+    if (server != null) await _db.setValue('api_base_url', server);
+  }
+
   /// Changes recorded on this phone that the server does not have yet.
   Future<int> unsyncedCount() => ref.read(repoProvider).queuedCount();
 
@@ -188,9 +215,7 @@ class AppController extends StateNotifier<AppState> {
     final previous = await _db.getValue('user_id');
     if (previous != null && previous != userId) {
       // A different person is signing in: this phone keeps only the signed-in user's data.
-      await _db.wipe();
-      await _db.setValue('language', state.language);
-      await _db.setValue('font_scale', '${state.fontScale}');
+      await _wipeKeepingDeviceSettings();
       state = AppState(ready: true, language: state.language, online: state.online, fontScale: state.fontScale, catalog: state.catalog);
     }
     final access = tokenResponse['access_token'] as String;
@@ -262,10 +287,9 @@ class AppController extends StateNotifier<AppState> {
     }
     await _secure.clearSession();
     ref.read(apiProvider).clearSession();
-    await _db.wipe(); // the phone keeps only the signed-in user's data
+    await _wipeKeepingDeviceSettings(); // the phone keeps only the signed-in user's data
     await ref.read(notificationsProvider).rescheduleAll(const [], (_) => '');
     state = AppState(ready: true, language: state.language, online: state.online, fontScale: state.fontScale, catalog: state.catalog);
-    await _db.setValue('language', state.language);
   }
 
   @override

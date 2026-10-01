@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/api_client.dart';
 import '../l10n.dart';
 import '../state/app_state.dart';
+import '../widgets/tester_tools.dart';
 
 enum _Step { language, phone, code }
 
@@ -162,6 +163,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 24),
         FilledButton(onPressed: busy ? null : _sendCode, child: Text(s.t('send_code'))),
         if (widget.reauth) TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(s.t('later'))),
+        const SizedBox(height: 24),
+        const TesterTools(signedIn: false), // tester builds only
       ];
 
   List<Widget> _codeStep(Strings s) => [

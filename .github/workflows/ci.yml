@@ -99,12 +99,32 @@ jobs:
       - name: SQLite for the in-memory database tests
         run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
       - run: flutter test
-      - run: flutter build apk --debug --dart-define=API_BASE_URL=https://api.example.invalid
-      - name: Scan the APK for secrets
+      # The tester build (docs/testing-on-a-phone.md): it can be pointed at any
+      # backend, shows the preview languages, and has a few tester tools.
+      # Set the repository variable TEST_API_BASE_URL to bake in a staging server.
+      - name: Build the tester APK
+        run: >-
+          flutter build apk --debug --split-per-abi
+          --dart-define=TESTER_BUILD=true
+          --dart-define=SHOW_PREVIEW_LANGUAGES=true
+          --dart-define=API_BASE_URL=${{ vars.TEST_API_BASE_URL || 'http://10.0.2.2:8000' }}
+      - name: Scan the APKs for secrets
         run: |
-          mkdir -p /tmp/apk && unzip -q -o build/app/outputs/flutter-apk/app-debug.apk -d /tmp/apk
+          for apk in build/app/outputs/flutter-apk/*.apk; do
+            unzip -q -o "$apk" -d "/tmp/apk/$(basename "$apk" .apk)"
+          done
           # High-signal patterns only: the bundled SQLCipher/OpenSSL and Flutter engine
           # libraries legitimately contain a bare '-----BEGIN ' PEM marker.
           if grep -rEal 'nvapi-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|postgres(ql)?(\+[a-z0-9]+)?://[^:@/ ]+:[^@/ ]+@' /tmp/apk; then
-            echo "Secret-like string found in the APK"; exit 1
+            echo "Secret-like string found in an APK"; exit 1
           fi
+      # arm64 for most phones from the last several years, armeabi-v7a for older ones.
+      - name: Publish the tester APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuro-sathi-tester-apk
+          path: |
+            mobile/build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
+            mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-debug.apk
+          if-no-files-found: error
+          retention-days: 14

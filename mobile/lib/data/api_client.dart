@@ -35,14 +35,19 @@ class OfflineException implements Exception {}
 class ApiClient {
   ApiClient({
     http.Client? client,
+    String? baseUrl,
     this.token,
     this.accessExpiresAt,
     this.refreshToken,
     this.onAccessRenewed,
     this.onSessionExpired,
-  }) : _http = client ?? http.Client();
+  })  : _http = client ?? http.Client(),
+        baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
   final http.Client _http;
+
+  /// The backend's address. Fixed at build time, except in tester builds.
+  String baseUrl;
 
   String? token;
   DateTime? accessExpiresAt;
@@ -67,7 +72,7 @@ class ApiClient {
     refreshToken = null;
   }
 
-  Uri _uri(String path, [Map<String, String>? query]) => Uri.parse('${AppConfig.apiBaseUrl}$path').replace(queryParameters: query);
+  Uri _uri(String path, [Map<String, String>? query]) => Uri.parse('$baseUrl$path').replace(queryParameters: query);
 
   Map<String, String> get _headers => {..._json, if (token != null) 'authorization': 'Bearer $token'};
 
