@@ -53,6 +53,10 @@ Future<SyncOutcome> runBackgroundSync() async {
   );
   final db = await openEncryptedDb();
   try {
+    if (AppConfig.testerBuild) {
+      final server = await db.getValue('api_base_url');
+      if (server != null) api.baseUrl = server;
+    }
     final repo = Repository(db);
     final catalog = await loadCatalog(db);
     final strings = Strings(catalog.pack(await storedLanguage(db, catalog)), catalog.english);
@@ -84,6 +88,17 @@ class BackgroundSync {
           _task,
           _task,
           frequency: AppConfig.backgroundSyncInterval,
+          constraints: Constraints(networkType: NetworkType.connected),
+        ),
+      );
+
+  /// Tester builds: run the job once, about a minute from now, so it can be
+  /// watched with the app closed.
+  static Future<void> runSoon() => _guard(
+        () => Workmanager().registerOneOffTask(
+          '${_task}_soon',
+          _task,
+          initialDelay: const Duration(minutes: 1),
           constraints: Constraints(networkType: NetworkType.connected),
         ),
       );

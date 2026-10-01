@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/api_client.dart';
 import '../l10n.dart';
 import '../state/app_state.dart';
+import '../widgets/tester_tools.dart';
 
 // State names come from the language pack (regions section).
 const _regions = ['assam', 'arunachal', 'manipur', 'meghalaya', 'mizoram', 'nagaland', 'sikkim', 'tripura'];
@@ -177,6 +178,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           OutlinedButton(onPressed: _signOut, child: Text(s.t('sign_out'))),
           const SizedBox(height: 24),
           Text(_lastSyncText(s), style: text.bodyMedium),
+          const SizedBox(height: 12),
+          const TesterTools(), // tester builds only
           const SizedBox(height: 12),
           Text(s.t('disclaimer'), style: text.bodyMedium),
         ],

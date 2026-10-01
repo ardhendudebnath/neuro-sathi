@@ -74,7 +74,9 @@ API_BASE_URL=http://localhost:8000 npm run dev
 
 ### Mobile app
 
-Needs the Flutter SDK (stable) and Android SDK.
+**To try it on a phone without installing Flutter**, use the tester APK that every CI run publishes, with the backend running on your computer: see [docs/testing-on-a-phone.md](docs/testing-on-a-phone.md). `python -m app.demo --phone <number>` creates a ready-to-use account with sample memories and a reminder due in a few minutes.
+
+To build it yourself you need the Flutter SDK (stable) and Android SDK.
 
 ```bash
 cd mobile

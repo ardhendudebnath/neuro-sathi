@@ -19,19 +19,12 @@ from ..security import (
     hash_refresh_token,
     new_otp,
     new_refresh_token,
+    normalise_phone,
     otp_matches,
 )
 from ..services import sms
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _normalise(phone: str) -> str:
-    """Store Indian numbers as +91XXXXXXXXXX."""
-    digits = phone.lstrip("+")
-    if len(digits) == 10:
-        digits = "91" + digits
-    return "+" + digits
 
 
 def _start_session(db: Session, user: User, device: str | None) -> str:
@@ -65,7 +58,7 @@ def _start_session(db: Session, user: User, device: str | None) -> str:
 @router.post("/otp", response_model=OtpResponse, dependencies=[Depends(RateLimit("otp_ip"))])
 def request_otp(body: OtpRequest) -> OtpResponse:
     s = get_settings()
-    phone = _normalise(body.phone)
+    phone = normalise_phone(body.phone)
     check_limit("otp_phone", phone)
     code = new_otp()
     with service_session() as db:
@@ -83,7 +76,7 @@ def request_otp(body: OtpRequest) -> OtpResponse:
 @router.post("/verify", response_model=TokenResponse, dependencies=[Depends(RateLimit("otp_ip"))])
 def verify_otp(body: OtpVerify, request: Request) -> TokenResponse:
     s = get_settings()
-    phone = _normalise(body.phone)
+    phone = normalise_phone(body.phone)
     bad = HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong or expired code")
     with service_session() as db:
         row = db.get(OtpCode, phone, with_for_update=True)
