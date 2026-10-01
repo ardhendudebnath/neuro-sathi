@@ -111,7 +111,9 @@ jobs:
       - name: Scan the APKs for secrets
         run: |
           for apk in build/app/outputs/flutter-apk/*.apk; do
-            unzip -q -o "$apk" -d "/tmp/apk/$(basename "$apk" .apk)"
+            dir="/tmp/apk/$(basename "$apk" .apk)"
+            mkdir -p "$dir"  # unzip creates only the last level of -d
+            unzip -q -o "$apk" -d "$dir"
           done
           # High-signal patterns only: the bundled SQLCipher/OpenSSL and Flutter engine
           # libraries legitimately contain a bare '-----BEGIN ' PEM marker.
