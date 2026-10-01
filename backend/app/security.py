@@ -48,6 +48,14 @@ def hash_refresh_token(token: str) -> str:
     return hmac.new(key, f"refresh:{token}".encode(), hashlib.sha256).hexdigest()
 
 
+def normalise_phone(phone: str) -> str:
+    """Store Indian numbers as +91XXXXXXXXXX."""
+    digits = phone.strip().lstrip("+")
+    if len(digits) == 10:
+        digits = "91" + digits
+    return "+" + digits
+
+
 def new_otp() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 

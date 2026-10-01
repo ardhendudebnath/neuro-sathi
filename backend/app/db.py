@@ -35,6 +35,11 @@ def _make_engine(url: str) -> Engine:
         def _on_begin(conn):  # noqa: ANN001
             conn.exec_driver_sql("BEGIN")
 
+        # SQLite is for development and tests only. PostgreSQL gets its schema (and
+        # row-level security) from db/migrations; here the tables come from the models.
+        from .models import Base
+
+        Base.metadata.create_all(engine)
         return engine
     return create_engine(url, pool_pre_ping=True)
 
