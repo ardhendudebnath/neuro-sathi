@@ -84,10 +84,24 @@ void main() {
     test('offline keeps the queue and releases the lock', () async {
       await playOneGame();
       server.offline = true;
+      final sync = service();
 
-      expect(await service().syncNow(), SyncOutcome.offline);
+      expect(await sync.syncNow(), SyncOutcome.offline);
       expect(await queued(), 1);
       expect(await db.tryLock('sync', AppConfig.syncLockTtl), isTrue);
+      expect(sync.lastProblem, contains('no network'), reason: 'tester builds log why');
+    });
+
+    test('says why a sync did not finish, and forgets it once one does', () async {
+      server.failNextSyncs = 1;
+      final sync = service();
+
+      expect(await sync.syncNow(), SyncOutcome.failed);
+      expect(sync.describe(SyncOutcome.failed), allOf(contains('failed'), contains('500'), contains(sync.api.baseUrl)));
+
+      expect(await sync.syncNow(), SyncOutcome.synced);
+      expect(sync.lastProblem, isNull);
+      expect(sync.describe(SyncOutcome.synced), endsWith(': synced'));
     });
 
     test('does not run while the other isolate holds the lock', () async {

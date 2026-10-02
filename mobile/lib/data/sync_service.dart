@@ -38,31 +38,45 @@ class SyncService {
   static const _batchSize = 200;
   static const _lock = 'sync';
 
+  /// Why the last sync did not finish; null after one that did.
+  String? lastProblem;
+
+  /// One line for tester builds' logs, e.g.
+  /// "with http://localhost:8000: offline (SocketException: Connection refused ...)".
+  String describe(SyncOutcome outcome) =>
+      'with ${api.baseUrl}: ${outcome.name}${lastProblem == null ? '' : ' ($lastProblem)'}';
+
   Future<SyncOutcome> syncNow() async {
-    if (!api.hasSession) return SyncOutcome.sessionExpired;
-    if (_running) return SyncOutcome.busy;
+    if (!api.hasSession) return _end(SyncOutcome.sessionExpired, 'not signed in');
+    if (_running) return _end(SyncOutcome.busy, 'a sync is already running');
     _running = true;
     var locked = false;
     try {
       locked = await db.tryLock(_lock, AppConfig.syncLockTtl);
-      if (!locked) return SyncOutcome.busy;
+      if (!locked) return _end(SyncOutcome.busy, 'another sync holds the lock');
       var more = true;
       while (more) {
         more = await _syncOneBatch();
       }
       await _cachePhotos();
       await _refreshContentIfStale();
-      return SyncOutcome.synced;
-    } on OfflineException {
-      return SyncOutcome.offline;
+      return _end(SyncOutcome.synced, null);
+    } on OfflineException catch (e) {
+      return _end(SyncOutcome.offline, '${e.cause ?? 'no connection'}');
     } on SessionExpiredException {
-      return SyncOutcome.sessionExpired; // nothing is deleted: the queue waits for the next sign-in
-    } on ApiException {
-      return SyncOutcome.failed;
+      // Nothing is deleted: the queue waits for the next sign-in.
+      return _end(SyncOutcome.sessionExpired, 'the server ended the session');
+    } on ApiException catch (e) {
+      return _end(SyncOutcome.failed, '$e');
     } finally {
       if (locked) await db.unlock(_lock);
       _running = false;
     }
+  }
+
+  SyncOutcome _end(SyncOutcome outcome, String? problem) {
+    lastProblem = problem;
+    return outcome;
   }
 
   /// Returns true if more queued changes remain.
