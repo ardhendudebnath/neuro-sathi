@@ -23,7 +23,15 @@ class SessionExpiredException extends ApiException {
 }
 
 /// No connection. Callers keep working offline and retry later.
-class OfflineException implements Exception {}
+class OfflineException implements Exception {
+  OfflineException([this.cause]);
+
+  /// The underlying error, such as "Connection refused", for tester builds' logs.
+  final Object? cause;
+
+  @override
+  String toString() => cause == null ? 'Offline' : 'Offline ($cause)';
+}
 
 /// Talks to the backend and keeps the session alive.
 ///
@@ -79,12 +87,12 @@ class ApiClient {
   Future<http.Response> _attempt(Future<http.Response> Function() call) async {
     try {
       return await call().timeout(const Duration(seconds: 20));
-    } on SocketException {
-      throw OfflineException();
-    } on TimeoutException {
-      throw OfflineException();
-    } on http.ClientException {
-      throw OfflineException();
+    } on SocketException catch (e) {
+      throw OfflineException(e);
+    } on TimeoutException catch (e) {
+      throw OfflineException(e);
+    } on http.ClientException catch (e) {
+      throw OfflineException(e);
     }
   }
 
@@ -196,10 +204,10 @@ class ApiClient {
       final res = await _http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
       if (res.statusCode != 200) throw ApiException(res.statusCode, 'download failed');
       return res.bodyBytes;
-    } on SocketException {
-      throw OfflineException();
-    } on TimeoutException {
-      throw OfflineException();
+    } on SocketException catch (e) {
+      throw OfflineException(e);
+    } on TimeoutException catch (e) {
+      throw OfflineException(e);
     }
   }
 

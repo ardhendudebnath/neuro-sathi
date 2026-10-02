@@ -72,7 +72,9 @@ Future<SyncOutcome> runBackgroundSync() async {
           notifications.rescheduleAll(await repo.reminders(), (r) => reminderTitle(strings, r)),
     );
     // If the app is open and syncing right now this returns "busy" and leaves it to the app.
-    return await sync.syncNow();
+    final outcome = await sync.syncNow();
+    if (AppConfig.testerBuild) debugPrint('NEURO-SATHI background sync ${sync.describe(outcome)}');
+    return outcome;
   } finally {
     await db.close();
   }

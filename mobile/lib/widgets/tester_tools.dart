@@ -2,8 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config.dart';
+import '../l10n.dart';
 import '../services/background_sync.dart';
 import '../state/app_state.dart';
+
+/// What sign-in shows when the server cannot be reached. Tester builds name the
+/// address they tried, because a fresh install points at the Android emulator's.
+String unreachableMessage(Strings s, String server, {bool tester = AppConfig.testerBuild}) {
+  if (!tester) return s.t('error_no_internet');
+  final emulator = Uri.tryParse(server)?.host == '10.0.2.2' ? ' That address only works in the Android emulator.' : '';
+  return 'Cannot reach the server at $server.$emulator Check the address in the Tester build box.';
+}
 
 /// Only in tester builds (--dart-define=TESTER_BUILD=true, the APK that CI
 /// publishes). English only on purpose: this is for testers, not for users.

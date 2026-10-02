@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config.dart';
@@ -8,6 +9,7 @@ import '../data/api_client.dart';
 import '../data/database.dart';
 import '../data/repository.dart';
 import '../data/secure_store.dart';
+import '../data/sync_retry.dart';
 import '../data/sync_service.dart';
 import '../l10n.dart';
 import '../l10n/load.dart';
@@ -90,6 +92,7 @@ class AppController extends StateNotifier<AppState> {
 
   final Ref ref;
   final _secure = SecureStore();
+  final _retry = SyncRetry();
   Timer? _timer;
   StreamSubscription<List<ConnectivityResult>>? _conn;
   late final SyncService _sync = SyncService(
@@ -148,13 +151,18 @@ class AppController extends StateNotifier<AppState> {
     if (cameOnline && state.signedIn) unawaited(syncNow());
   }
 
-  Future<void> syncNow() async {
+  /// [retry] marks the retries scheduled by [SyncRetry]; any other call is a new
+  /// reason to sync and starts a fresh series of retries.
+  Future<void> syncNow({bool retry = false}) async {
     if (!state.signedIn || state.sessionExpired) return;
+    if (!retry) _retry.restart();
     final outcome = await _sync.syncNow();
+    if (AppConfig.testerBuild) debugPrint('NEURO-SATHI sync ${_sync.describe(outcome)}');
     if (outcome == SyncOutcome.sessionExpired) {
       await _onSessionExpired();
       return;
     }
+    if (mounted) _retry.after(outcome, () => unawaited(syncNow(retry: true)));
     final downloaded = parseDownloadedPack(await _db.getValue('language_pack'));
     if (downloaded != null) state = state.copyWith(catalog: state.catalog.withDownloaded(downloaded));
     refreshScreens();
@@ -294,6 +302,7 @@ class AppController extends StateNotifier<AppState> {
 
   @override
   void dispose() {
+    _retry.cancel();
     _timer?.cancel();
     _conn?.cancel();
     super.dispose();

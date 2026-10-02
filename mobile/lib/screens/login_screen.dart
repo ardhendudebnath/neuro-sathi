@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config.dart';
 import '../data/api_client.dart';
 import '../l10n.dart';
 import '../state/app_state.dart';
@@ -59,7 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await action();
     } on OfflineException {
-      setState(() => error = ref.read(stringsProvider).t('error_no_internet'));
+      setState(() => error = unreachableMessage(ref.read(stringsProvider), ref.read(apiProvider).baseUrl));
     } on ApiException catch (e) {
       final s = ref.read(stringsProvider);
       setState(() => error = switch (e.status) {
@@ -146,6 +147,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   List<Widget> _phoneStep(Strings s) => [
+        // First, so testers set the server before trying to sign in.
+        if (AppConfig.testerBuild) ...[
+          const TesterTools(signedIn: false),
+          const SizedBox(height: 16),
+        ],
         if (widget.reauth) ...[
           Text(s.t('session_expired'), style: Theme.of(context).textTheme.bodyLarge),
           const SizedBox(height: 20),
@@ -163,8 +169,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 24),
         FilledButton(onPressed: busy ? null : _sendCode, child: Text(s.t('send_code'))),
         if (widget.reauth) TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(s.t('later'))),
-        const SizedBox(height: 24),
-        const TesterTools(signedIn: false), // tester builds only
       ];
 
   List<Widget> _codeStep(Strings s) => [

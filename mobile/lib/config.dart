@@ -19,6 +19,11 @@ class AppConfig {
   /// A sync lock older than this belongs to a run that was killed; take it over.
   static const syncLockTtl = Duration(minutes: 10);
 
+  /// After a sync that did not finish, try again after these delays before
+  /// leaving it to [syncInterval]. The first attempt after the phone wakes up or
+  /// the app opens often fails while the connection comes back.
+  static const syncRetryDelays = [Duration(seconds: 30), Duration(minutes: 2)];
+
   /// A reminder not marked done within this window is logged as missed.
   static const reminderGrace = Duration(hours: 2);
 
