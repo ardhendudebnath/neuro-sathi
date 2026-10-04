@@ -1,6 +1,6 @@
 {
   "language": "bn",
-  "version": 3,
+  "version": 4,
   "meta": {
     "english_name": "Bengali",
     "native_name": "বাংলা",
@@ -33,11 +33,14 @@
     "no": "না",
     "offline": "অফলাইন - সব কিছু সংরক্ষিত আছে",
     "next_reminder": "পরবর্তী",
+    "reminders_may_be_late": "এই ফোনে মনে করানোর ঘণ্টা দেরিতে বাজতে পারে। বোতামটি চাপুন, তারপর সুইচটি চালু করুন, যাতে সময়মতো বাজে।",
+    "ring_on_time": "সময়মতো বাজান",
     "no_more_today": "আজ আর কিছু নেই",
     "enter_phone": "আপনার মোবাইল নম্বর",
     "send_code": "কোড পাঠান",
     "enter_code": "৬ সংখ্যার কোডটি লিখুন",
     "your_name": "আপনার নাম",
+    "save": "সেভ করুন",
     "continue": "এগিয়ে যান",
     "choose_language": "আপনার ভাষা বেছে নিন",
     "tap_to_speak": "চাপ দিয়ে কথা বলুন",

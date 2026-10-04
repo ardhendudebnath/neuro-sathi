@@ -17,6 +17,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final _name = TextEditingController();
   String? _linkCode;
   String? _error;
   bool _voiceConsent = false;
@@ -25,6 +26,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _name.text = ref.read(appProvider).name ?? '';
     ref.read(apiProvider).profile().then((p) {
       if (mounted) setState(() => _voiceConsent = p['voice_consent'] == true);
     }).catchError((Object _) {}); // offline: keep the safe default (off)
@@ -33,6 +35,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final at = v == null ? null : DateTime.tryParse(v)?.toLocal();
       if (mounted && at != null) setState(() => _lastSync = at);
     }).catchError((Object _) {});
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveName() async {
+    final name = _name.text.trim();
+    if (name.isEmpty || name == ref.read(appProvider).name) return;
+    setState(() => _error = null);
+    try {
+      await ref.read(appProvider.notifier).setName(name);
+      if (!mounted) return;
+      FocusScope.of(context).unfocus();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ref.read(stringsProvider).t('done'))));
+    } on Exception catch (e) {
+      setState(() => _error = _errorText(e));
+    }
   }
 
   String _lastSyncText(Strings s) {
@@ -115,6 +137,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+          Text(s.t('your_name'), style: text.titleLarge),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _name,
+                  textCapitalization: TextCapitalization.words,
+                  style: const TextStyle(fontSize: 22),
+                  onSubmitted: (_) => _saveName(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton(onPressed: _saveName, child: Text(s.t('save'))),
+            ],
+          ),
+          const SizedBox(height: 24),
           Text(s.t('choose_language'), style: text.titleLarge),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(

@@ -1,6 +1,6 @@
 {
   "language": "en",
-  "version": 3,
+  "version": 4,
   "meta": {
     "english_name": "English",
     "native_name": "English",
@@ -33,11 +33,14 @@
     "no": "No",
     "offline": "Offline - everything is saved",
     "next_reminder": "Next",
+    "reminders_may_be_late": "Reminders may ring late on this phone. Tap the button, then turn on the switch, so they ring on time.",
+    "ring_on_time": "Ring on time",
     "no_more_today": "Nothing more today",
     "enter_phone": "Your mobile number",
     "send_code": "Send code",
     "enter_code": "Enter the 6-digit code",
     "your_name": "Your name",
+    "save": "Save",
     "continue": "Continue",
     "choose_language": "Choose your language",
     "tap_to_speak": "Tap and speak",

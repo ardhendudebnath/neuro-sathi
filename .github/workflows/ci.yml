@@ -99,6 +99,21 @@ jobs:
       - name: SQLite for the in-memory database tests
         run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
       - run: flutter test
+      # One signing key for every tester APK, so a new build installs over the last
+      # one and keeps its data. The key is a repository secret, which workflows from
+      # forks cannot read (the Actions cache could). Without it, each run signs with
+      # a new key. Setup: docs/testing-on-a-phone.md, "One signing key for all tester APKs".
+      - name: Use the tester signing key
+        env:
+          TESTER_KEYSTORE_BASE64: ${{ secrets.TESTER_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$TESTER_KEYSTORE_BASE64" ]; then
+            echo "::notice::No TESTER_KEYSTORE_BASE64 secret: this tester APK gets a new signing key, so testers must uninstall the previous one first."
+            exit 0
+          fi
+          mkdir -p ~/.android
+          echo "$TESTER_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+          keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep 'SHA256:'
       # The tester build (docs/testing-on-a-phone.md): it can be pointed at any
       # backend, shows the preview languages, and has a few tester tools.
       # Set the repository variable TEST_API_BASE_URL to bake in a staging server.
