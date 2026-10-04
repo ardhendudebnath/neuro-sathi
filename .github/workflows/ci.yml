@@ -112,7 +112,9 @@ jobs:
             exit 0
           fi
           mkdir -p ~/.android
-          echo "$TESTER_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+          # Keep only base64 characters: a secret set by piping from Windows PowerShell
+          # can carry a byte-order mark or a CR-LF, which base64 -d rejects.
+          printf '%s' "$TESTER_KEYSTORE_BASE64" | tr -cd 'A-Za-z0-9+/=' | base64 -d > ~/.android/debug.keystore
           keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep 'SHA256:'
       # The tester build (docs/testing-on-a-phone.md): it can be pointed at any
       # backend, shows the preview languages, and has a few tester tools.
