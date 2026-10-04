@@ -1,6 +1,7 @@
 """Patch the generated Android project for NEURO-SATHI's plugins. Idempotent.
 
-- permissions: internet, microphone (on-device speech), notifications, boot
+- permissions: internet, microphone (on-device speech), notifications, boot,
+  exact alarms (so reminders ring on the minute once the user allows it)
 - flutter_local_notifications receivers so reminders survive a reboot
 - <queries> for the speech recogniser and text-to-speech engines
 - core library desugaring (required by flutter_local_notifications)
@@ -21,6 +22,7 @@ PERMISSIONS = [
     "android.permission.POST_NOTIFICATIONS",
     "android.permission.RECEIVE_BOOT_COMPLETED",
     "android.permission.VIBRATE",
+    "android.permission.SCHEDULE_EXACT_ALARM",
 ]
 
 RECEIVERS = """

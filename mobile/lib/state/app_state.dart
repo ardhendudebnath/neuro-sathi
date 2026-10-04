@@ -37,6 +37,7 @@ class AppState {
     this.fontScale = 1.4,
     this.online = false,
     this.catalog = LanguageCatalog.none,
+    this.exactAlarms = true,
   });
 
   final bool ready;
@@ -55,6 +56,10 @@ class AppState {
   final bool online;
   final LanguageCatalog catalog;
 
+  /// Reminders can ring at the exact minute. When false, Android may hold them
+  /// back and the home screen offers to fix it.
+  final bool exactAlarms;
+
   LanguagePack get currentPack => catalog.pack(language);
   Strings get strings => Strings(currentPack, catalog.english);
 
@@ -69,6 +74,7 @@ class AppState {
     double? fontScale,
     bool? online,
     LanguageCatalog? catalog,
+    bool? exactAlarms,
   }) =>
       AppState(
         ready: ready ?? this.ready,
@@ -81,6 +87,7 @@ class AppState {
         fontScale: fontScale ?? this.fontScale,
         online: online ?? this.online,
         catalog: catalog ?? this.catalog,
+        exactAlarms: exactAlarms ?? this.exactAlarms,
       );
 }
 
@@ -131,6 +138,7 @@ class AppController extends StateNotifier<AppState> {
     );
     await ref.read(voiceProvider).setLanguage(state.currentPack);
     await ref.read(notificationsProvider).init((_) {});
+    state = state.copyWith(exactAlarms: await ref.read(notificationsProvider).exactAlarmsAllowed());
 
     final connectivity = Connectivity();
     _setOnline(await connectivity.checkConnectivity());
@@ -211,8 +219,24 @@ class AppController extends StateNotifier<AppState> {
   /// The app came back to the foreground.
   Future<void> onResumed() async {
     refreshScreens();
+    await _checkExactAlarms(); // the user may have just changed Android's "Alarms & reminders" setting
     await logMissedReminders();
     await syncNow();
+  }
+
+  /// Reschedules the reminders when exact alarms are allowed or taken away, so
+  /// they use the kind of alarm the phone now permits.
+  Future<void> _checkExactAlarms() async {
+    final exact = await ref.read(notificationsProvider).exactAlarmsAllowed();
+    if (!mounted || exact == state.exactAlarms) return;
+    state = state.copyWith(exactAlarms: exact);
+    if (state.signedIn) await rescheduleReminders();
+  }
+
+  /// Opens Android's "Alarms & reminders" setting for the app.
+  Future<void> allowExactAlarms() async {
+    await ref.read(notificationsProvider).requestExactAlarms();
+    await _checkExactAlarms();
   }
 
   /// Called after the code is verified: a first sign-in, or signing in again after
@@ -224,7 +248,7 @@ class AppController extends StateNotifier<AppState> {
     if (previous != null && previous != userId) {
       // A different person is signing in: this phone keeps only the signed-in user's data.
       await _wipeKeepingDeviceSettings();
-      state = AppState(ready: true, language: state.language, online: state.online, fontScale: state.fontScale, catalog: state.catalog);
+      state = _deviceSettingsOnly();
     }
     final access = tokenResponse['access_token'] as String;
     final expiresAt = DateTime.now().add(Duration(seconds: tokenResponse['expires_in'] as int));
@@ -275,6 +299,16 @@ class AppController extends StateNotifier<AppState> {
     state = state.copyWith(fontScale: scale);
   }
 
+  /// The name the app greets the user with. Saved on the server first, so the
+  /// family sees the same one: this needs a connection (OfflineException).
+  Future<void> setName(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    await ref.read(apiProvider).updateMe({'name': trimmed});
+    await _db.setValue('name', trimmed);
+    state = state.copyWith(name: trimmed);
+  }
+
   Future<void> rescheduleReminders() async {
     final s = state.strings;
     final list = await ref.read(repoProvider).reminders();
@@ -297,8 +331,18 @@ class AppController extends StateNotifier<AppState> {
     ref.read(apiProvider).clearSession();
     await _wipeKeepingDeviceSettings(); // the phone keeps only the signed-in user's data
     await ref.read(notificationsProvider).rescheduleAll(const [], (_) => '');
-    state = AppState(ready: true, language: state.language, online: state.online, fontScale: state.fontScale, catalog: state.catalog);
+    state = _deviceSettingsOnly();
   }
+
+  /// A signed-out state that keeps what belongs to the phone, not the person.
+  AppState _deviceSettingsOnly() => AppState(
+        ready: true,
+        language: state.language,
+        online: state.online,
+        fontScale: state.fontScale,
+        catalog: state.catalog,
+        exactAlarms: state.exactAlarms,
+      );
 
   @override
   void dispose() {

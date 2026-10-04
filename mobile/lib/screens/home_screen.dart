@@ -50,6 +50,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 const _NextReminderCard(),
+                const _OnTimeRemindersCard(),
                 const SizedBox(height: 20),
                 GridView.count(
                   crossAxisCount: 2,
@@ -128,6 +129,51 @@ class _NextReminderCard extends ConsumerWidget {
                 Expanded(child: Text(text, style: Theme.of(context).textTheme.titleLarge)),
                 SpeakButton(text),
               ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Android may hold a reminder back by up to an hour unless the app is allowed
+/// exact alarms ("Alarms & reminders"), which Android 14 and later leave off.
+/// Shown only then, and only when there is a reminder to ring.
+class _OnTimeRemindersCard extends ConsumerWidget {
+  const _OnTimeRemindersCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(appProvider.select((a) => a.exactAlarms))) return const SizedBox.shrink();
+    final s = ref.watch(stringsProvider);
+    return StreamBuilder<List<ReminderRow>>(
+      stream: ref.watch(repoProvider).watchReminders(),
+      builder: (context, snap) {
+        if (!(snap.data ?? const <ReminderRow>[]).any((r) => r.active)) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Card(
+            elevation: 0,
+            color: const Color(0xFFFFEFD6),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: Text(s.t('reminders_may_be_late'), style: Theme.of(context).textTheme.bodyLarge)),
+                      SpeakButton(s.t('reminders_may_be_late')),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    onPressed: () => ref.read(appProvider.notifier).allowExactAlarms(),
+                    child: Text(s.t('ring_on_time')),
+                  ),
+                ],
+              ),
             ),
           ),
         );

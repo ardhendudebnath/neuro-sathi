@@ -1,6 +1,6 @@
 {
   "language": "as",
-  "version": 3,
+  "version": 4,
   "meta": {
     "english_name": "Assamese",
     "native_name": "অসমীয়া",
@@ -33,11 +33,14 @@
     "no": "নহয়",
     "offline": "অফলাইন - সকলো সংৰক্ষিত আছে",
     "next_reminder": "পৰৱৰ্তী",
+    "reminders_may_be_late": "এই ফোনত সোঁৱৰণী পলমকৈ বাজিব পাৰে। বুটামটো টিপক, তাৰ পিছত ছুইচটো অন কৰক, যাতে সময়মতে বাজে।",
+    "ring_on_time": "সময়মতে বজাওক",
     "no_more_today": "আজি আৰু একো নাই",
     "enter_phone": "আপোনাৰ মোবাইল নম্বৰ",
     "send_code": "ক'ড পঠিয়াওক",
     "enter_code": "৬ অংকৰ ক'ডটো লিখক",
     "your_name": "আপোনাৰ নাম",
+    "save": "ছেভ কৰক",
     "continue": "আগবাঢ়ক",
     "choose_language": "আপোনাৰ ভাষা বাছক",
     "tap_to_speak": "টিপক আৰু কওক",

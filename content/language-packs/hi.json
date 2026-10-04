@@ -1,6 +1,6 @@
 {
   "language": "hi",
-  "version": 3,
+  "version": 4,
   "meta": {
     "english_name": "Hindi",
     "native_name": "हिन्दी",
@@ -33,11 +33,14 @@
     "no": "नहीं",
     "offline": "ऑफ़लाइन - सब कुछ सुरक्षित है",
     "next_reminder": "अगला",
+    "reminders_may_be_late": "इस फ़ोन पर याद दिलाने की घंटी देर से बज सकती है। बटन दबाएँ, फिर स्विच चालू करें, ताकि वह समय पर बजे।",
+    "ring_on_time": "समय पर बजाएँ",
     "no_more_today": "आज और कुछ नहीं",
     "enter_phone": "आपका मोबाइल नंबर",
     "send_code": "कोड भेजें",
     "enter_code": "6 अंकों का कोड डालें",
     "your_name": "आपका नाम",
+    "save": "सेव करें",
     "continue": "आगे बढ़ें",
     "choose_language": "अपनी भाषा चुनें",
     "tap_to_speak": "दबाएँ और बोलें",

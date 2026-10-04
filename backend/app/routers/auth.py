@@ -88,13 +88,19 @@ def verify_otp(body: OtpVerify, request: Request) -> TokenResponse:
         else:
             db.delete(row)
             failed = False
+            name = (body.name or "").strip() or None
             user = db.scalar(select(User).where(User.phone == phone))
             if user is None:
-                user = User(phone=phone, name=body.name, role=Role(body.role))
+                user = User(phone=phone, name=name, role=Role(body.role))
                 db.add(user)
                 db.flush()
                 db.add(Profile(user_id=user.id))
                 record_audit(db, user.id, "signup", user.id, role=user.role.value)
+            elif name and name != user.name:
+                # The app asks for a name whenever it is set up, also on a new phone or
+                # after a reinstall: what the person types is what they want to be
+                # called. Left empty, the stored name stays.
+                user.name = name
             record_audit(db, user.id, "login", user.id)
             token = create_access_token(user.id, user.role)
             refresh_token = _start_session(db, user, body.device)

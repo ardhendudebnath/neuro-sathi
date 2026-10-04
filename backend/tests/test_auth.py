@@ -9,6 +9,27 @@ def test_signup_and_me(client):
     assert me["phone"].startswith("+91")
 
 
+def sign_in(client, phone: str, name: str | None = None) -> dict:
+    code = client.post("/auth/otp", json={"phone": phone}).json()["dev_code"]
+    body = {"phone": phone, "code": code} | ({} if name is None else {"name": name})
+    r = client.post("/auth/verify", json=body)
+    assert r.status_code == 200, r.text
+    return r.json()["user"]
+
+
+def test_name_typed_when_signing_in_again_replaces_the_stored_one(client):
+    phone = "+919876500005"
+    assert sign_in(client, phone, name="Ardhendu")["name"] == "Ardhendu"
+    assert sign_in(client, phone, name="  Shivam ")["name"] == "Shivam"  # e.g. on a new phone
+
+
+def test_signing_in_without_a_name_keeps_the_stored_one(client):
+    phone = "+919876500006"
+    sign_in(client, phone, name="Anima")
+    assert sign_in(client, phone)["name"] == "Anima"
+    assert sign_in(client, phone, name="   ")["name"] == "Anima"
+
+
 def test_wrong_code_rejected_and_attempts_capped(client):
     phone = "+919876500001"
     client.post("/auth/otp", json={"phone": phone})
