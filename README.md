@@ -109,7 +109,7 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 
 Built so far: everything above. Not yet done:
 
-- Native-speaker review of the Hindi, Assamese, Bengali, Nepali and Manipuri packs (all AI-drafted, Manipuri with the least confidence). All but Hindi stay hidden from users until reviewed.
+- Native-speaker review of the Hindi, Assamese, Bengali, Nepali and Manipuri packs (all AI-drafted, Manipuri with the least confidence). All but Hindi stay hidden from users until reviewed. Reviewers work in a spreadsheet; see [Reviewing a pack](content/language-packs/README.md#reviewing-a-pack).
 - More NER languages: Bodo, Khasi, Mizo and others.
 - Voice for regional languages. Phones often have no Assamese voice, so the app falls back to a Bengali one; phones have no Manipuri voice at all; the hosted companion model does not cover Assamese, Nepali or Manipuri, so Sathi gives scripted answers there. See [docs/nvidia-models.md](docs/nvidia-models.md).
 - Trained tree-based models (scikit-learn / XGBoost) replacing the v1 rules once there is real data. The same goes for a TFLite model on the phone.

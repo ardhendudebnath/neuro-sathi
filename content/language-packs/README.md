@@ -29,16 +29,36 @@ Hindi is `public` because it was in the first version's scope, but it has had no
 
 ## Reviewing a pack
 
-1. Build the app with `--dart-define=SHOW_PREVIEW_LANGUAGES=true` and pick the language, or read the JSON directly.
-2. Fix the text in the file. Things to check:
+Native speakers review a pack in a spreadsheet, so they need no JSON or GitHub.
+
+1. Export a review sheet:
+
+   ```bash
+   cd backend
+   python -m app.pack_review export bn
+   ```
+
+   This writes `bn-review.csv`, which opens in Excel or Google Sheets. It has a row per text with the English, the current translation, empty **Correction** and **Comment** columns, and what to check. Medicine and reminder wording comes first.
+2. Send it to the reviewer. They fill in Correction only where a text is wrong, and use Comment for anything else, such as a food that is not eaten locally. They save it as CSV again (in Excel, **CSV UTF-8**). Things to check:
    - **Reminders and medicine wording** (`medicine_time`, `voice_prompts`, `sathi.answers.med_*`): clear, polite and unambiguous.
    - **Respectful address** for elderly users throughout.
    - **`sathi.keywords`**: the words people really use when asking about medicine, the time or day, a person, and today's plan. See the keyword rules below.
    - **`games`**: food names, the daily routine and object descriptions should be familiar locally.
-   - **`time.periods`**: the day-part words and the hour each starts.
-3. In `meta.review`, set `"status": "reviewed"` and add the reviewers' names to `"reviewers"`.
-4. Set `meta.release` to `"public"` and raise `version` by one (phones download a pack only when its version is newer than the bundled one).
-5. Run the validator and the tests (below), then open a pull request.
+   - **`time.periods`**: the day-part words and the hours each covers.
+
+   To see the texts in the app, build it with `--dart-define=SHOW_PREVIEW_LANGUAGES=true` and pick the language.
+3. Import the filled-in sheet:
+
+   ```bash
+   python -m app.pack_review import bn bn-review.csv --reviewer "Reviewer Name" --reviewed --publish
+   ```
+
+   Import applies only the filled-in corrections and keeps the file's layout. It raises `version` by one (phones download a pack only when its version is newer than the bundled one) and adds the reviewer to `meta.review.reviewers`. It changes nothing if a correction fails the language checks, such as a missing `{placeholder}`, or if a translation has changed since the sheet was exported. Comments without a correction are printed for you to act on. Add `--dry-run` to see the changes first.
+   - `--reviewed` marks the pack `reviewed`: use it once the reviewer has checked every row, and leave it out for a partial review.
+   - `--publish` sets `meta.release` to `public`, so users can pick the language. It needs a reviewed pack.
+4. Run the validator and the tests (below), then open a pull request. Don't commit the sheets: they are ignored by git.
+
+For Manipuri, import lists the rows to change in the other script's pack too: export that pack's sheet, fill in the same rows and import it with the same options.
 
 ## Adding a language
 

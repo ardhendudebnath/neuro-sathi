@@ -21,6 +21,9 @@ __pycache__/
 backend/uploads/
 backend/tests/.uploads/
 
+# language-pack review sheets (app.pack_review): reviewers' working copies
+*-review.csv
+
 # node / next
 node_modules/
 .next/
