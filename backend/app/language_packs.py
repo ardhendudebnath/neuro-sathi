@@ -8,7 +8,8 @@ or corrected in one place. Every pack is checked against the English source:
 
 Release rules: a "preview" pack is hidden from users (the app shows it only in
 builds made with SHOW_PREVIEW_LANGUAGES) and is not served by the API. A pack
-becomes "public" once a native speaker has reviewed it.
+becomes "public" once a native speaker has reviewed it, in a spreadsheet made
+by app.pack_review.
 """
 
 import json
@@ -160,19 +161,27 @@ def _dict_at(doc: dict, dotted: str) -> dict:
     return node if isinstance(node, dict) else {}
 
 
+def text_slots(doc: dict) -> list[tuple[str, dict | list, str | int]]:
+    """Every user-visible text in a pack as (location, container, key): the text is container[key]."""
+    out: list[tuple[str, dict | list, str | int]] = []
+    for dotted in KEYED_SECTIONS:
+        section = _dict_at(doc, dotted)
+        out += [(f"{dotted}.{k}", section, k) for k in section]
+    days = doc.get("days", [])
+    out += [(f"days[{i}]", days, i) for i in range(len(days))]
+    games = doc.get("games", {})
+    for name in ("foods", "routine"):
+        items = games.get(name, [])
+        out += [(f"games.{name}[{i}]", items, i) for i in range(len(items))]
+    for i, obj in enumerate(games.get("objects", [])):
+        out += [(f"games.objects[{i}].title", obj, "title"), (f"games.objects[{i}].note", obj, "note")]
+    out += [(f"time.periods[{i}].label", p, "label") for i, p in enumerate(doc.get("time", {}).get("periods", []))]
+    return out
+
+
 def _texts(doc: dict) -> list[tuple[str, object]]:
     """Every user-visible text in a pack, with its location."""
-    out: list[tuple[str, object]] = []
-    for dotted in KEYED_SECTIONS:
-        out += [(f"{dotted}.{k}", v) for k, v in _dict_at(doc, dotted).items()]
-    out += [(f"days[{i}]", v) for i, v in enumerate(doc.get("days", []))]
-    games = doc.get("games", {})
-    out += [(f"games.foods[{i}]", v) for i, v in enumerate(games.get("foods", []))]
-    out += [(f"games.routine[{i}]", v) for i, v in enumerate(games.get("routine", []))]
-    for i, obj in enumerate(games.get("objects", [])):
-        out += [(f"games.objects[{i}].title", obj.get("title")), (f"games.objects[{i}].note", obj.get("note"))]
-    out += [(f"time.periods[{i}].label", p.get("label")) for i, p in enumerate(doc.get("time", {}).get("periods", []))]
-    return out
+    return [(where, box.get(key) if isinstance(box, dict) else box[key]) for where, box, key in text_slots(doc)]
 
 
 def _script_errors(code: str, script: str, where: str, text: str) -> list[str]:
