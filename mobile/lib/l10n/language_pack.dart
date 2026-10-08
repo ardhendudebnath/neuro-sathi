@@ -124,7 +124,7 @@ class LanguagePack {
 
   bool get isPublic => release == 'public';
 
-  static const _digitSets = {'latin': '0123456789', 'beng': '০১২৩৪৫৬৭৮৯', 'deva': '०१२३४५६७८९'};
+  static const _digitSets = {'latin': '0123456789', 'beng': '০১২৩৪৫৬৭৮৯', 'deva': '०१२३४५६७८९', 'mtei': '꯰꯱꯲꯳꯴꯵꯶꯷꯸꯹'};
 
   String localizeDigits(String text) {
     final native = _digitSets[digits] ?? _digitSets['latin']!;
@@ -161,7 +161,7 @@ const _nukta = {
   'ड़': 'ड़', 'ढ़': 'ढ़', 'फ़': 'फ़', 'य़': 'य़',
 };
 
-final _token = RegExp(r'''[^\s.,!?।॥"'()\-:;]+''');
+final _token = RegExp(r'''[^\s.,!?।॥꯫"'()\-:;]+'''); // ꯫ is the Meitei Mayek full stop
 
 String normalizeText(String text) {
   final out = StringBuffer();

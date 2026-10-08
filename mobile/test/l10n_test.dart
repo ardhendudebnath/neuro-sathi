@@ -26,6 +26,8 @@ void main() {
     expect(visible, isNot(contains('as')));
     expect(visible, isNot(contains('bn')));
     expect(visible, isNot(contains('ne')));
+    expect(visible, isNot(contains('mni-Beng')));
+    expect(visible, isNot(contains('mni-Mtei')));
   });
 
   test("time uses each language's day-parts and digits", () {
@@ -34,6 +36,8 @@ void main() {
     expect(loadPack('as').formatTime(20, 0), 'ৰাতি ৮:০০');
     expect(loadPack('bn').formatTime(7, 30), 'সকাল ৭:৩০');
     expect(loadPack('ne').formatTime(10, 0), 'बिहान १०:००');
+    expect(loadPack('mni-Beng').formatTime(20, 0), 'অহিং ৮:০০');
+    expect(loadPack('mni-Mtei').formatTime(20, 0), 'ꯑꯍꯤꯡ ꯸:꯰꯰');
   });
 
   test('numbers in messages use the pack digits; missing keys fall back to English', () {
@@ -63,6 +67,10 @@ void main() {
     // Precomposed and decomposed forms of য় are the same word.
     expect(hasIntent('সময়', loadPack('as'), en, 'time'), isTrue);
     expect(hasIntent('সময়', loadPack('as'), en, 'time'), isTrue);
+  });
+
+  test('the Meitei Mayek full stop ꯫ ends a word', () {
+    expect(tokenize('ꯉꯁꯤ ꯀꯔꯤ ꯅꯨꯃꯤꯠꯅꯣ꯫'), ['ꯉꯁꯤ', 'ꯀꯔꯤ', 'ꯅꯨꯃꯤꯠꯅꯣ']);
   });
 
   test('games draw words and routines from the pack', () {

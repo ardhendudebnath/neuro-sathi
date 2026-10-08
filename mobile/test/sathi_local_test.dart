@@ -60,6 +60,18 @@ void main() {
         'अहिले बुधबार, बिहान १०:०० बज्यो।');
   });
 
+  test('Manipuri answers match the server, in both scripts', () {
+    const med = [LocalReminder('Metformin', 'medication', 20, 0, [0, 1, 2, 3, 4, 5, 6])];
+    expect(answerLocally('ঐগি হিদাক চাবা মতম করমবা?', loadPack('mni-Beng'), en, med, const [], wednesday10am),
+        'নহাক্কি মথংগি হিদাক Metformin, অহিং ৮:০০দা।');
+    expect(answerLocally('ꯑꯩꯒꯤ ꯍꯤꯗꯥꯛ ꯆꯥꯕ ꯃꯇꯝ ꯀꯔꯝꯕ?', loadPack('mni-Mtei'), en, med, const [], wednesday10am),
+        'ꯅꯍꯥꯛꯀꯤ ꯃꯊꯪꯒꯤ ꯍꯤꯗꯥꯛ Metformin, ꯑꯍꯤꯡ ꯸:꯰꯰ꯗ꯫');
+    const ichanupi = [LocalPerson(title: 'Rina', name: 'Rina', relationship: 'ꯏꯆꯥꯅꯨꯄꯤ')];
+    expect(answerLocally('Rina ꯀꯅꯥꯅꯣ?', loadPack('mni-Mtei'), en, const [], ichanupi, wednesday10am), 'Rina ꯅꯍꯥꯛꯀꯤ ꯏꯆꯥꯅꯨꯄꯤꯅꯤ꯫');
+    expect(answerLocally('ꯉꯁꯤ ꯀꯔꯤ ꯅꯨꯃꯤꯠꯅꯣ꯫', loadPack('mni-Mtei'), en, const [], const [], wednesday10am),
+        'ꯍꯧꯖꯤꯛ ꯌꯨꯝꯁꯀꯩꯁ, ꯑꯌꯨꯛ ꯱꯰:꯰꯰ꯅꯤ꯫');
+  });
+
   test('other questions go online', () {
     expect(ask('Tell me about Majuli'), isNull);
   });

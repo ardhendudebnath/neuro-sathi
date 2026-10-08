@@ -9,8 +9,16 @@ One JSON file per language. The same files are used by the backend (Sathi's answ
 | `as.json` | Assamese | Bengali-Assamese | preview | not yet reviewed |
 | `bn.json` | Bengali | Bengali | preview | not yet reviewed |
 | `ne.json` | Nepali | Devanagari | preview | not yet reviewed |
+| `mni-Beng.json` | Manipuri (Meiteilon) | Bengali | preview | not yet reviewed |
+| `mni-Mtei.json` | Manipuri (Meiteilon) | Meitei Mayek | preview | not yet reviewed |
 
 All non-English packs were drafted by an AI model. A mistranslated medicine reminder can cause real harm, so each pack needs a native speaker's review before users see it.
+
+## Manipuri
+
+Manipuri comes in two packs with the same wording, one per script, and the user picks one: many older readers learned the Bengali script at school, while Meitei Mayek is the script taught since the 2000s. A reviewer who changes one pack changes the other in the same way; a test checks that both keep the same keys, list lengths and keywords.
+
+The Manipuri drafts are less certain than the other packs and need an especially careful review. Phones have no Manipuri voice, so the Bengali-script pack falls back to a Bengali voice and the Meitei Mayek pack has none (the app says so). The hosted companion model does not support Manipuri, so Sathi answers from the pack (`llm: false`). Android has shipped a Meitei Mayek font since version 5.1, so none is bundled.
 
 ## Release rules
 
@@ -35,11 +43,11 @@ Hindi is `public` because it was in the first version's scope, but it has had no
 ## Adding a language
 
 1. Copy `en.json` to `<code>.json` (a BCP-47 code of at most 8 characters, such as `kha` or `mni-Beng`) and set `"language"` to the same code.
-2. Fill in `meta`: names, `script` (`Latn`, `Beng` or `Deva`), `release: "preview"`, review status `unreviewed`, the phone voice locales to try in order (`tts_locales`, `stt_locales`), and whether the hosted companion model supports the language (`llm`).
+2. Fill in `meta`: names, `script` (`Latn`, `Beng`, `Deva` or `Mtei`), `release: "preview"`, review status `unreviewed`, the phone voice locales to try in order (`tts_locales`, `stt_locales`), and whether the hosted companion model supports the language (`llm`).
 3. Translate every section. Keep the `{placeholders}` exactly as in English.
 4. Run the validator.
 
-A new script needs one line in `SCRIPT_RANGES` in `backend/app/language_packs.py` so the script checks cover it.
+A new script needs one line in `SCRIPT_RANGES` in `backend/app/language_packs.py` so the script checks cover it, and its digits in `DIGITS` there and in `mobile/lib/l10n/language_pack.dart` if it has its own. A script with its own full stop (like Meitei Mayek's ꯫) also needs it in the word-splitting pattern in both files.
 
 ## What a pack contains
 
@@ -48,7 +56,7 @@ A new script needs one line in `SCRIPT_RANGES` in `backend/app/language_packs.py
 | `strings` | All app text. |
 | `voice_prompts` | Sentences read aloud, such as reminder announcements. |
 | `days` | Seven day names, Monday first. |
-| `time` | 12-hour time: `format` with `{h}`, `{mm}`, `{period}`; `periods` (day-part word and the hour it starts; hours before the first one use the last, for the night); `digits` (`latin`, `beng` or `deva`). |
+| `time` | 12-hour time: `format` with `{h}`, `{mm}`, `{period}`; `periods` (day-part word and the hour it starts; hours before the first one use the last, for the night); `digits` (`latin`, `beng`, `deva` or `mtei`). |
 | `regions` | Names of the eight North-Eastern states. |
 | `sathi.answers` | Sathi's scripted answers. |
 | `sathi.keywords` | Words that tell Sathi what a question is about. |

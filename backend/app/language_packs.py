@@ -26,13 +26,13 @@ INTENTS = ("medicine", "time", "who", "schedule")
 SECTIONS = ("language", "version", "meta", "strings", "voice_prompts", "days", "time", "regions", "sathi", "games")
 META_FIELDS = ("english_name", "native_name", "script", "release", "review", "tts_locales", "stt_locales", "llm")
 KEYED_SECTIONS = ("strings", "voice_prompts", "regions", "sathi.answers", "games.names")
-SCRIPT_RANGES = {"Beng": (0x0980, 0x09FF), "Deva": (0x0900, 0x097F)}
+SCRIPT_RANGES = {"Beng": (0x0980, 0x09FF), "Deva": (0x0900, 0x097F), "Mtei": (0xABC0, 0xABFF)}
 # The danda and double danda sit in the Devanagari block but are shared by all Indic scripts.
 SHARED_PUNCTUATION = {"\u0964", "\u0965"}
-DIGITS = {"latin": "0123456789", "beng": "০১২৩৪৫৬৭৮৯", "deva": "०१२३४५६७८९"}
+DIGITS = {"latin": "0123456789", "beng": "০১২৩৪৫৬৭৮৯", "deva": "०१२३४५६७८९", "mtei": "꯰꯱꯲꯳꯴꯵꯶꯷꯸꯹"}
 
 PLACEHOLDER = re.compile(r"\{(\w+)\}")
-TOKEN = re.compile(r"[^\s.,!?।॥\"'()\-:;]+")
+TOKEN = re.compile(r"[^\s.,!?।॥꯫\"'()\-:;]+")  # ꯫ is the Meitei Mayek full stop
 
 # Precomposed nukta letters -> base letter + nukta, so text typed with either
 # Unicode form (e.g. য় as U+09DF or U+09AF U+09BC) matches the same keywords.
@@ -82,7 +82,7 @@ def english_name(language: str | None) -> str:
 
 
 def llm_supported(language: str | None) -> bool:
-    """Whether the hosted companion model handles this language (Sarvam-M does not cover Assamese or Nepali)."""
+    """Whether the hosted companion model handles this language (Sarvam-M does not cover Assamese, Nepali or Manipuri)."""
     return bool(meta(language).get("llm"))
 
 
