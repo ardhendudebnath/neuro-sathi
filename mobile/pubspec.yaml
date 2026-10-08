@@ -24,6 +24,7 @@ dependencies:
   speech_to_text: ^7.3.0
   workmanager: ^0.10.6  # 0.10.6+ builds with AGP 9 (older versions leave the plugin class uncompiled)
   uuid: ^4.5.1
+  sensors_plus: ^7.1.0  # the phone's tilt, for the home screen's depth effect
 
 dev_dependencies:
   flutter_test:
@@ -36,3 +37,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/lang/  # generated from content/language-packs by tool/sync_language_packs.py
+  shaders:
+    - shaders/sathi_orb.frag  # Sathi's glowing orb (lib/design/sathi_orb.dart)

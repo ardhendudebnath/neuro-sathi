@@ -42,24 +42,39 @@ class BigTile extends StatelessWidget {
 }
 
 /// Reads [text] aloud. Every screen has one so nothing depends on reading.
+/// [foreground] and [background] restyle it, e.g. as glass on the home sky.
 class SpeakButton extends ConsumerWidget {
-  const SpeakButton(this.text, {super.key});
+  const SpeakButton(this.text, {super.key, this.foreground, this.background, this.border});
   final String text;
+  final Color? foreground;
+  final Color? background;
+  final Color? border;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
-    return IconButton.filledTonal(
-      iconSize: 32,
+    void speak() {
+      final voice = ref.read(voiceProvider);
+      if (!voice.canSpeak) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(s.t('voice_unavailable'))));
+        return;
+      }
+      voice.speak(text);
+    }
+
+    if (foreground == null && background == null) {
+      return IconButton.filledTonal(iconSize: 32, tooltip: s.t('read_aloud'), onPressed: speak, icon: const Icon(Icons.volume_up_rounded));
+    }
+    return IconButton(
+      iconSize: 28,
       tooltip: s.t('read_aloud'),
-      onPressed: () {
-        final voice = ref.read(voiceProvider);
-        if (!voice.canSpeak) {
-          ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(s.t('voice_unavailable'))));
-          return;
-        }
-        voice.speak(text);
-      },
+      onPressed: speak,
+      style: IconButton.styleFrom(
+        foregroundColor: foreground,
+        backgroundColor: background,
+        side: border == null ? null : BorderSide(color: border!),
+        minimumSize: const Size(52, 52),
+      ),
       icon: const Icon(Icons.volume_up_rounded),
     );
   }

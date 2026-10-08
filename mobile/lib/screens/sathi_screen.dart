@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/api_client.dart';
 import '../data/repository.dart';
+import '../design/sathi_orb.dart';
 import '../services/sathi_local.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
@@ -18,6 +20,9 @@ class _Message {
 /// the device); other questions go to the backend companion when online.
 class SathiScreen extends ConsumerStatefulWidget {
   const SathiScreen({super.key});
+
+  /// The deep sky behind Sathi; also the color the screen grows from.
+  static const background = Color(0xFF152B42);
 
   @override
   ConsumerState<SathiScreen> createState() => _SathiScreenState();
@@ -108,78 +113,191 @@ class _SathiScreenState extends ConsumerState<SathiScreen> {
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
-    final scheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      appBar: AppBar(title: Text(s.t('talk_to_sathi'))),
-      body: Column(
-        children: [
-          const OfflineBanner(),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_thinking ? 1 : 0),
-              itemBuilder: (context, i) {
-                if (i == _messages.length) {
-                  return const Padding(padding: EdgeInsets.all(12), child: Text('…', style: TextStyle(fontSize: 32)));
-                }
-                final m = _messages[i];
-                return Align(
-                  alignment: m.fromUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    padding: const EdgeInsets.all(16),
-                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
-                    decoration: BoxDecoration(
-                      color: m.fromUser ? scheme.primaryContainer : scheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(child: Text(m.text, style: Theme.of(context).textTheme.bodyLarge)),
-                        if (!m.fromUser) SpeakButton(m.text),
-                      ],
-                    ),
-                  ),
-                );
-              },
+    final animate = !MediaQuery.of(context).disableAnimations;
+    final width = MediaQuery.sizeOf(context).width;
+    // Big while there is nothing to read; it moves up once the conversation starts.
+    final orbSize = _messages.isEmpty ? (width * 0.62).clamp(180.0, 280.0).toDouble() : 128.0;
+    const white = Colors.white;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        backgroundColor: SathiScreen.background,
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          title: Text(s.t('talk_to_sathi')),
+          backgroundColor: Colors.transparent,
+          foregroundColor: white,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: white),
+        ),
+        body: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(0, -0.45),
+              radius: 1.25,
+              colors: [Color(0xFF1E5367), SathiScreen.background, Color(0xFF0A1324)],
+              stops: [0, 0.48, 1],
             ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 96,
-                    child: FilledButton.icon(
-                      onPressed: _thinking ? null : _listen,
-                      icon: Icon(_listening ? Icons.stop_rounded : Icons.mic_rounded, size: 44),
-                      label: Text(_listening ? s.t('listening') : s.t('tap_to_speak'), style: const TextStyle(fontSize: 26)),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _input,
-                          style: const TextStyle(fontSize: 20),
-                          decoration: InputDecoration(hintText: s.t('type_instead')),
-                          onSubmitted: _ask,
+          child: SafeArea(
+            child: Column(
+              children: [
+                const OfflineBanner(),
+                AnimatedContainer(
+                  duration: animate ? const Duration(milliseconds: 450) : Duration.zero,
+                  curve: Curves.easeOutCubic,
+                  width: orbSize,
+                  height: orbSize,
+                  child: FittedBox(child: SathiOrb(size: 280, listening: _listening || _thinking, animate: animate)),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    itemCount: _messages.length + (_thinking ? 1 : 0),
+                    itemBuilder: (context, i) {
+                      if (i == _messages.length) {
+                        return const Padding(padding: EdgeInsets.all(12), child: Text('…', style: TextStyle(fontSize: 32, color: white)));
+                      }
+                      final m = _messages[i];
+                      return Align(
+                        alignment: m.fromUser ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: EdgeInsets.fromLTRB(16, 12, m.fromUser ? 16 : 6, 12),
+                          constraints: BoxConstraints(maxWidth: width * 0.84),
+                          decoration: BoxDecoration(
+                            color: m.fromUser ? white.withValues(alpha: 0.16) : null,
+                            gradient: m.fromUser
+                                ? null
+                                : LinearGradient(colors: [const Color(0xFF68D8C5).withValues(alpha: 0.32), const Color(0xFF3D8BF0).withValues(alpha: 0.26)]),
+                            border: Border.all(color: (m.fromUser ? white : const Color(0xFF7EE3D2)).withValues(alpha: 0.3)),
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(22),
+                              topRight: const Radius.circular(22),
+                              bottomLeft: Radius.circular(m.fromUser ? 22 : 8),
+                              bottomRight: Radius.circular(m.fromUser ? 8 : 22),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(child: Text(m.text, style: const TextStyle(fontSize: 20, height: 1.3, fontWeight: FontWeight.w600, color: white))),
+                              if (!m.fromUser) SpeakButton(m.text, foreground: white, background: white.withValues(alpha: 0.14)),
+                            ],
+                          ),
                         ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  child: Column(
+                    children: [
+                      _MicButton(
+                        label: _listening ? s.t('listening') : s.t('tap_to_speak'),
+                        listening: _listening,
+                        enabled: !_thinking,
+                        onTap: _listen,
                       ),
-                      const SizedBox(width: 10),
-                      OutlinedButton(onPressed: _thinking ? null : () => _ask(_input.text), child: Text(s.t('ask'))),
+                      Text(_listening ? s.t('listening') : s.t('tap_to_speak'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: white)),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _input,
+                              style: const TextStyle(fontSize: 20, color: white),
+                              cursorColor: white,
+                              decoration: InputDecoration(
+                                hintText: s.t('type_instead'),
+                                hintStyle: TextStyle(color: white.withValues(alpha: 0.7)),
+                                filled: true,
+                                fillColor: white.withValues(alpha: 0.1),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: const BorderRadius.all(Radius.circular(18)),
+                                  borderSide: BorderSide(color: white.withValues(alpha: 0.3)),
+                                ),
+                                focusedBorder: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(Radius.circular(18)),
+                                  borderSide: BorderSide(color: Color(0xFF7EE3D2), width: 2),
+                                ),
+                              ),
+                              onSubmitted: _ask,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          OutlinedButton(
+                            onPressed: _thinking ? null : () => _ask(_input.text),
+                            style: OutlinedButton.styleFrom(foregroundColor: white, side: BorderSide(color: white.withValues(alpha: 0.6), width: 2)),
+                            child: Text(s.t('ask')),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A raised round button that sinks when pressed, like a real one.
+class _MicButton extends StatefulWidget {
+  const _MicButton({required this.label, required this.listening, required this.enabled, required this.onTap});
+
+  final String label;
+  final bool listening;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  State<_MicButton> createState() => _MicButtonState();
+}
+
+class _MicButtonState extends State<_MicButton> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final lip = _down ? 2.0 : 8.0;
+    return Semantics(
+      button: true,
+      enabled: widget.enabled,
+      label: widget.label,
+      excludeSemantics: true,
+      onTap: widget.enabled ? widget.onTap : null,
+      child: GestureDetector(
+        onTapDown: widget.enabled ? (_) => setState(() => _down = true) : null,
+        onTapUp: widget.enabled ? (_) => setState(() => _down = false) : null,
+        onTapCancel: () => setState(() => _down = false),
+        onTap: widget.enabled ? widget.onTap : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 110),
+          width: 96,
+          height: 96,
+          margin: const EdgeInsets.only(bottom: 8),
+          transform: Matrix4.translationValues(0, 8 - lip, 0),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              center: const Alignment(-0.32, -0.44),
+              colors: widget.listening
+                  ? const [Color(0xFFFFD9CF), Color(0xFFF0604F), Color(0xFFA8281C)]
+                  : const [Color(0xFF9FF0E2), Color(0xFF2FC0A8), Color(0xFF0F6E66)],
+              stops: const [0, 0.32, 1],
+            ),
+            boxShadow: [
+              BoxShadow(color: widget.listening ? const Color(0xFF6E1A12) : const Color(0xFF07433E), offset: Offset(0, lip)),
+              BoxShadow(color: const Color(0xCC2FC0A8).withValues(alpha: widget.enabled ? 0.8 : 0.2), offset: Offset(0, lip + 12), blurRadius: 30, spreadRadius: -14),
+            ],
+          ),
+          child: Icon(widget.listening ? Icons.stop_rounded : Icons.mic_rounded, size: 48, color: Colors.white.withValues(alpha: widget.enabled ? 1 : 0.5)),
+        ),
       ),
     );
   }
