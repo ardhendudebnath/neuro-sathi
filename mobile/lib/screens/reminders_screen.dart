@@ -28,14 +28,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   }
 
   Future<void> _loadDone() async {
-    final repo = ref.read(repoProvider);
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day);
-    final date = occurrenceDate(start);
-    final done = <String>{};
-    for (final r in await repo.reminders()) {
-      if (await repo.hasActivity('reminder_done', (p) => p['reminder_id'] == r.id && p['date'] == date, start)) done.add(r.id);
-    }
+    final done = await remindersDoneToday(ref.read(repoProvider), DateTime.now());
     if (mounted) setState(() => _doneToday.addAll(done));
   }
 

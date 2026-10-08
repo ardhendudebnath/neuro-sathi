@@ -56,7 +56,10 @@ class _TesterToolsState extends ConsumerState<TesterTools> {
   }
 
   Future<void> _changeServer() async {
-    var value = ref.read(appProvider.notifier).serverUrl;
+    // Read before the dialog: this box can be rebuilt away while the dialog is
+    // open (signing in replaces the screen), and the address must still be saved.
+    final app = ref.read(appProvider.notifier);
+    var value = app.serverUrl;
     final input = await showDialog<String>(
       context: context,
       builder: (dialog) => AlertDialog(
@@ -75,7 +78,7 @@ class _TesterToolsState extends ConsumerState<TesterTools> {
       ),
     );
     if (input == null) return;
-    final ok = await ref.read(appProvider.notifier).setServer(input);
+    final ok = await app.setServer(input);
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Server saved' : 'That is not a usable address')));

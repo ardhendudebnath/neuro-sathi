@@ -236,6 +236,16 @@ void main() {
       expect((await missed()).single.occurredAt, DateTime(2026, 9, 29, 8, 0));
     });
 
+    test("today's done list, which the home screen shares between its next card and its ring", () async {
+      await addReminder('r1', '08:00:00');
+      await addReminder('r2', '20:00:00');
+      await repo.logActivity('reminder_done', {'reminder_id': 'r1', 'kind': 'medication', 'date': '2026-09-29'}, DateTime(2026, 9, 29, 8, 5));
+      expect(await remindersDoneToday(repo, wednesdayNoon), isEmpty, reason: "yesterday's done does not count today");
+
+      await repo.logActivity('reminder_done', {'reminder_id': 'r1', 'kind': 'medication', 'date': '2026-09-30'}, DateTime(2026, 9, 30, 8, 5));
+      expect(await remindersDoneToday(repo, wednesdayNoon), {'r1'});
+    });
+
     test('a late-evening reminder is counted after midnight', () async {
       await addReminder('r1', '23:00:00');
       final thursdayHalfPastOne = DateTime(2026, 10, 1, 1, 30);
