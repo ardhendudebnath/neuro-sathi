@@ -83,7 +83,7 @@ def english_name(language: str | None) -> str:
 
 
 def llm_supported(language: str | None) -> bool:
-    """Whether the hosted companion model handles this language (Sarvam-M does not cover Assamese, Nepali or Manipuri)."""
+    """Whether the hosted companion model handles this language (Sarvam-M does not cover Assamese, Nepali, Manipuri or Bodo)."""
     return bool(meta(language).get("llm"))
 
 
