@@ -11,6 +11,7 @@ One JSON file per language. The same files are used by the backend (Sathi's answ
 | `ne.json` | Nepali | Devanagari | preview | not yet reviewed |
 | `mni-Beng.json` | Manipuri (Meiteilon) | Bengali | preview | not yet reviewed |
 | `mni-Mtei.json` | Manipuri (Meiteilon) | Meitei Mayek | preview | not yet reviewed |
+| `brx.json` | Bodo (Boro) | Devanagari | preview | not yet reviewed |
 
 All non-English packs were drafted by an AI model. A mistranslated medicine reminder can cause real harm, so each pack needs a native speaker's review before users see it.
 
@@ -19,6 +20,12 @@ All non-English packs were drafted by an AI model. A mistranslated medicine remi
 Manipuri comes in two packs with the same wording, one per script, and the user picks one: many older readers learned the Bengali script at school, while Meitei Mayek is the script taught since the 2000s. A reviewer who changes one pack changes the other in the same way; a test checks that both keep the same keys, list lengths and keywords.
 
 The Manipuri drafts are less certain than the other packs and need an especially careful review. Phones have no Manipuri voice, so the Bengali-script pack falls back to a Bengali voice and the Meitei Mayek pack has none (the app says so). The hosted companion model does not support Manipuri, so Sathi answers from the pack (`llm: false`). Android has shipped a Meitei Mayek font since version 5.1, so none is bundled.
+
+## Bodo
+
+Bodo is written in Devanagari, the script the Bodo Sahitya Sabha adopted, with `’` after a letter for the o-vowel and tone, as in `बर’` (Boro). Times use Latin digits (`हर नि 8:00`), as in Unicode's locale data for Bodo.
+
+The Bodo draft is the least certain of all the packs. Key words (medicine, time, day names, family, the foods and objects) were checked against [Bihung](https://bihung.org), the Bodo Sahitya Sabha's dictionary, and against Unicode's locale data for Bodo, but the sentences were not. The polite instructions ending in `-दो` especially need a native speaker's eye. Phones have no Bodo voice, so the app falls back to a Hindi voice, which reads Devanagari but not with Bodo pronunciation. The hosted companion model does not support Bodo, so Sathi answers from the pack (`llm: false`). Sathi's keywords avoid the `’` mark, so questions match however a keyboard types it.
 
 ## Release rules
 

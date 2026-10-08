@@ -72,6 +72,16 @@ void main() {
         'ꯍꯧꯖꯤꯛ ꯌꯨꯝꯁꯀꯩꯁ, ꯑꯌꯨꯛ ꯱꯰:꯰꯰ꯅꯤ꯫');
   });
 
+  test('Bodo answers match the server', () {
+    final bodo = loadPack('brx');
+    const med = [LocalReminder('Metformin', 'medication', 20, 0, [0, 1, 2, 3, 4, 5, 6])];
+    expect(answerLocally('आंनि मुलि जानाय सम माब्ला?', bodo, en, med, const [], wednesday10am),
+        'नोंथांनि उननि मुलिया Metformin, हर नि 8:00 समाव।');
+    const phisajw = [LocalPerson(title: 'Rina', name: 'Rina', relationship: 'फिसाजो')];
+    expect(answerLocally('Rina सोर?', bodo, en, const [], phisajw, wednesday10am), 'Rina नोंथांनि फिसाजो नंगौ।');
+    expect(answerLocally('दिनै मा सान?', bodo, en, const [], const [], wednesday10am), 'दा बुधबार, फुं नि 10:00।');
+  });
+
   test('other questions go online', () {
     expect(ask('Tell me about Majuli'), isNull);
   });

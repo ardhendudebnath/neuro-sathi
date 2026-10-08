@@ -19,7 +19,7 @@ Speech uses NVIDIA's hosted Riva gRPC endpoint and needs the optional `nvidia-ri
 
 ## Language coverage
 
-Each language pack says whether the hosted companion model supports it (`meta.llm` in `content/language-packs`). Sarvam-M covers Hindi and Bengali but not Assamese, Nepali or Manipuri, so for those Sathi answers everyday questions from the pack and gives its scripted fallback for anything else, instead of sending the question to a model that cannot answer in the user's language.
+Each language pack says whether the hosted companion model supports it (`meta.llm` in `content/language-packs`). Sarvam-M covers Hindi and Bengali but not Assamese, Nepali, Manipuri or Bodo, so for those Sathi answers everyday questions from the pack and gives its scripted fallback for anything else, instead of sending the question to a model that cannot answer in the user's language.
 
 ## Known gap
 

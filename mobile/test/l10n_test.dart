@@ -28,6 +28,7 @@ void main() {
     expect(visible, isNot(contains('ne')));
     expect(visible, isNot(contains('mni-Beng')));
     expect(visible, isNot(contains('mni-Mtei')));
+    expect(visible, isNot(contains('brx')));
   });
 
   test("time uses each language's day-parts and digits", () {
@@ -38,6 +39,7 @@ void main() {
     expect(loadPack('ne').formatTime(10, 0), 'बिहान १०:००');
     expect(loadPack('mni-Beng').formatTime(20, 0), 'অহিং ৮:০০');
     expect(loadPack('mni-Mtei').formatTime(20, 0), 'ꯑꯍꯤꯡ ꯸:꯰꯰');
+    expect(loadPack('brx').formatTime(20, 0), 'हर नि 8:00');
   });
 
   test('numbers in messages use the pack digits; missing keys fall back to English', () {

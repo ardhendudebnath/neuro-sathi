@@ -39,7 +39,7 @@ def test_first_wave_languages_are_present():
     assert {"en", "hi", "as", "bn", "ne"} <= lp.supported()
 
 
-@pytest.mark.parametrize("code", ["as", "bn", "ne", "mni-Beng", "mni-Mtei"])
+@pytest.mark.parametrize("code", ["as", "bn", "ne", "mni-Beng", "mni-Mtei", "brx"])
 def test_regional_drafts_stay_hidden_until_reviewed(code):
     info = lp.meta(code)
     assert info["release"] == "preview"
@@ -110,6 +110,9 @@ def test_the_two_manipuri_packs_stay_in_step():
         ("mni-Beng", 20, 0, "অহিং ৮:০০"),
         ("mni-Mtei", 20, 0, "ꯑꯍꯤꯡ ꯸:꯰꯰"),
         ("mni-Mtei", 2, 5, "ꯑꯍꯤꯡ ꯲:꯰꯵"),
+        ("brx", 20, 0, "हर नि 8:00"),
+        ("brx", 13, 30, "सानजौ नि 1:30"),
+        ("brx", 2, 0, "हर नि 2:00"),
     ],
 )
 def test_format_time(code, hour, minute, expected):
@@ -164,6 +167,15 @@ def test_manipuri_in_meitei_mayek():
     assert answer_locally("ꯉꯁꯤ ꯀꯔꯤ ꯅꯨꯃꯤꯠꯅꯣ꯫", "mni-Mtei", [], [], NOW).text == "ꯍꯧꯖꯤꯛ ꯌꯨꯝꯁꯀꯩꯁ, ꯑꯌꯨꯛ ꯱꯰:꯰꯰ꯅꯤ꯫"
 
 
+def test_bodo():
+    med = [R("Metformin", "medication", time(20, 0))]
+    assert answer_locally("आंनि मुलि जानाय सम माब्ला?", "brx", med, [], NOW).text == "नोंथांनि उननि मुलिया Metformin, हर नि 8:00 समाव।"
+    assert answer_locally("Rina सोर?", "brx", [], [M("Rina", "फिसाजो")], NOW).text == "Rina नोंथांनि फिसाजो नंगौ।"
+    assert answer_locally("दिनै मा सान?", "brx", [], [], NOW).text == "दा बुधबार, फुं नि 10:00।"
+    # सम (time) is a whole word: Monday, समबार, does not make a question about the time.
+    assert not lp.has_intent("समबार खामानि मा?", "brx", "time")
+
+
 def test_english_words_work_in_other_languages():
     answer = answer_locally("tablet কখন?", "bn", [R("Metformin", "medication", time(20, 0))], [], NOW)
     assert "Metformin" in answer.text
@@ -191,6 +203,7 @@ def test_language_setting_accepts_known_packs_only(client):
     h, _ = signup(client)
     assert client.patch("/me", json={"language": "as"}, headers=h).json()["language"] == "as"
     assert client.patch("/me", json={"language": "mni-Mtei"}, headers=h).json()["language"] == "mni-Mtei"
+    assert client.patch("/me", json={"language": "brx"}, headers=h).json()["language"] == "brx"
     assert client.patch("/me", json={"language": "xx"}, headers=h).status_code == 422
 
 
