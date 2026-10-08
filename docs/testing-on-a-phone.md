@@ -1,6 +1,6 @@
 # Testing on a phone
 
-Every CI run builds a **tester APK** that installs on any Android phone without Flutter. It is a debug build of the app with three extras: you can point it at any backend (such as your laptop, over Wi-Fi or a USB cable), it offers the preview languages (Assamese, Bengali, Nepali) awaiting review, and Settings has a button that runs the background sync on demand. Normal builds have none of these.
+Every CI run builds a **tester APK** that installs on any Android phone without Flutter. It is a debug build of the app with three extras: you can point it at any backend (such as your laptop, over Wi-Fi or a USB cable), it offers the preview languages awaiting review (Assamese, Bengali, Nepali, and Manipuri in Bengali script and in Meitei Mayek), and Settings has a button that runs the background sync on demand. Normal builds have none of these.
 
 ## 1. Get the APK
 
@@ -98,7 +98,7 @@ while ($true) { .\adb reverse tcp:8000 tcp:8000 *> $null; Start-Sleep 3 }
 | Games | Play a few rounds of several games. Levels adjust after a couple of sessions. |
 | Sathi | Ask "when is my medicine?", "who is Rina?" and "what day is it?", by voice and by typing. Turn on airplane mode: these still work. |
 | Offline | In airplane mode, play a game and mark a reminder done. Reconnect: it uploads at the next sync and **Last synced** updates. Over the USB cable, unplug it instead: airplane mode does not cut the cable. |
-| Languages | Switch language in Settings. Voice uses the phone's own voices; Assamese may fall back to a Bengali voice, and if a language has none the app says so. |
+| Languages | Switch language in Settings. Voice uses the phone's own voices; Assamese and Bengali-script Manipuri may fall back to a Bengali voice; if a language has none (Meitei Mayek Manipuri) the app says so. |
 | Sign in again | Run `.venv\Scripts\python -m app.demo --phone 9876543210 --end-sessions`. Within the hour (when the phone's current access token runs out) the home screen shows **Sign in again**. Everything on the phone is still there; after signing in, syncing resumes. |
 | Caregiver view (optional) | The dashboard needs Node.js 20. From `dashboard`: `npm install`, then `$env:API_BASE_URL="http://localhost:8000"; npm run dev`, open `http://localhost:3000` and sign in with the caregiver number. Add a reminder or a memory with a photo and watch it reach the phone. |
 

@@ -39,7 +39,7 @@ def test_first_wave_languages_are_present():
     assert {"en", "hi", "as", "bn", "ne"} <= lp.supported()
 
 
-@pytest.mark.parametrize("code", ["as", "bn", "ne"])
+@pytest.mark.parametrize("code", ["as", "bn", "ne", "mni-Beng", "mni-Mtei"])
 def test_regional_drafts_stay_hidden_until_reviewed(code):
     info = lp.meta(code)
     assert info["release"] == "preview"
@@ -73,6 +73,27 @@ def test_bengali_pack_rejects_assamese_letters():
     assert any("Bengali uses র and ব" in e for e in errors)
 
 
+def test_meitei_mayek_pack_rejects_other_scripts():
+    bad = copy.deepcopy(lp.pack("mni-Mtei"))
+    bad["strings"]["play"] = "শান্নবা"  # the Bengali-script spelling
+    bad["strings"]["later"] = "Later"
+    text = "\n".join(lp.validate(bad, EN)[0])
+    assert "strings.play: contains Beng characters in a Mtei pack" in text
+    assert "strings.later: has no Mtei text" in text
+
+
+def test_the_two_manipuri_packs_stay_in_step():
+    # Same wording in two scripts: a reviewer who changes one has to change the other.
+    beng, mtei = lp.pack("mni-Beng"), lp.pack("mni-Mtei")
+    for dotted in lp.KEYED_SECTIONS:
+        assert lp._dict_at(beng, dotted).keys() == lp._dict_at(mtei, dotted).keys(), dotted
+    for key in ("foods", "routine", "objects"):
+        assert len(beng["games"][key]) == len(mtei["games"][key]), key
+    for intent in lp.INTENTS:
+        assert len(beng["sathi"]["keywords"][intent]) == len(mtei["sathi"]["keywords"][intent]), intent
+    assert [p["from"] for p in beng["time"]["periods"]] == [p["from"] for p in mtei["time"]["periods"]]
+
+
 # --- localized formatting and intents -----------------------------------------------------
 
 
@@ -86,6 +107,9 @@ def test_bengali_pack_rejects_assamese_letters():
         ("as", 20, 0, "ৰাতি ৮:০০"),
         ("bn", 7, 30, "সকাল ৭:৩০"),
         ("ne", 10, 0, "बिहान १०:००"),
+        ("mni-Beng", 20, 0, "অহিং ৮:০০"),
+        ("mni-Mtei", 20, 0, "ꯑꯍꯤꯡ ꯸:꯰꯰"),
+        ("mni-Mtei", 2, 5, "ꯑꯍꯤꯡ ꯲:꯰꯵"),
     ],
 )
 def test_format_time(code, hour, minute, expected):
@@ -127,6 +151,19 @@ def test_assamese_schedule_uses_assamese_time():
     assert answer.text == "আজিৰ বাকী কামবোৰ: আবেলি ৫:০০ খোজ কঢ়া।"
 
 
+def test_manipuri_in_bengali_script():
+    med = [R("Metformin", "medication", time(20, 0))]
+    assert answer_locally("ঐগি হিদাক চাবা মতম করমবা?", "mni-Beng", med, [], NOW).text == "নহাক্কি মথংগি হিদাক Metformin, অহিং ৮:০০দা।"
+    assert answer_locally("Rina কনানো?", "mni-Beng", [], [M("Rina", "ইচানুপি")], NOW).text == "Rina নহাক্কি ইচানুপিনি।"
+
+
+def test_manipuri_in_meitei_mayek():
+    med = [R("Metformin", "medication", time(20, 0))]
+    assert answer_locally("ꯑꯩꯒꯤ ꯍꯤꯗꯥꯛ ꯆꯥꯕ ꯃꯇꯝ ꯀꯔꯝꯕ?", "mni-Mtei", med, [], NOW).text == "ꯅꯍꯥꯛꯀꯤ ꯃꯊꯪꯒꯤ ꯍꯤꯗꯥꯛ Metformin, ꯑꯍꯤꯡ ꯸:꯰꯰ꯗ꯫"
+    # ꯫ is the Meitei Mayek full stop: "ꯅꯨꯃꯤꯠꯅꯣ꯫" is still the word "ꯅꯨꯃꯤꯠꯅꯣ".
+    assert answer_locally("ꯉꯁꯤ ꯀꯔꯤ ꯅꯨꯃꯤꯠꯅꯣ꯫", "mni-Mtei", [], [], NOW).text == "ꯍꯧꯖꯤꯛ ꯌꯨꯝꯁꯀꯩꯁ, ꯑꯌꯨꯛ ꯱꯰:꯰꯰ꯅꯤ꯫"
+
+
 def test_english_words_work_in_other_languages():
     answer = answer_locally("tablet কখন?", "bn", [R("Metformin", "medication", time(20, 0))], [], NOW)
     assert "Metformin" in answer.text
@@ -153,6 +190,7 @@ def test_only_public_packs_are_served(client):
 def test_language_setting_accepts_known_packs_only(client):
     h, _ = signup(client)
     assert client.patch("/me", json={"language": "as"}, headers=h).json()["language"] == "as"
+    assert client.patch("/me", json={"language": "mni-Mtei"}, headers=h).json()["language"] == "mni-Mtei"
     assert client.patch("/me", json={"language": "xx"}, headers=h).status_code == 422
 
 
