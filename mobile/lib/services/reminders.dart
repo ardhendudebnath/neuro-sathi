@@ -12,6 +12,17 @@ String reminderTitle(Strings s, ReminderRow r) => r.kind == 'medication' ? s.t('
 String occurrenceDate(DateTime day) =>
     '${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
 
+/// Ids of the reminders marked done today.
+Future<Set<String>> remindersDoneToday(Repository repo, DateTime now) async {
+  final start = DateTime(now.year, now.month, now.day);
+  final date = occurrenceDate(start);
+  final done = <String>{};
+  for (final r in await repo.reminders()) {
+    if (await repo.hasActivity('reminder_done', (p) => p['reminder_id'] == r.id && p['date'] == date, start)) done.add(r.id);
+  }
+  return done;
+}
+
 /// Logs `reminder_missed` for every occurrence that is past the grace window
 /// and was not marked done. Feeds routine adherence on the caregiver dashboard.
 ///

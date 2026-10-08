@@ -62,7 +62,8 @@ void main() {
     float rim = pow(1.0 - n.z, 2.4);
     col = base * (0.42 + 0.7 * diffuse) + spec * 0.85 + rim * vec3(0.55, 0.95, 1.0) * 0.75;
   }
-  float halo = exp(-7.0 * max(d - r, 0.0)) * (0.55 + uListen * 0.5) * (1.0 - body);
+  // The halo fades out before the edge of the square it is drawn in, so no box shows.
+  float halo = exp(-7.0 * max(d - r, 0.0)) * (0.55 + uListen * 0.5) * (1.0 - body) * (1.0 - smoothstep(0.84, 1.0, d));
   vec3 haloColor = mix(vec3(0.32, 0.88, 0.78), vec3(0.45, 0.35, 0.95), 0.5 + 0.5 * sin(uTime * 0.5));
   vec3 rgb = min(col, vec3(1.0)) * body + haloColor * halo;
   fragColor = vec4(rgb, min(body + halo, 1.0));

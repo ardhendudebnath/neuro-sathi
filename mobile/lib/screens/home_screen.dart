@@ -38,17 +38,32 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStateMixin {
   final _tilt = Tilt();
   late DayPart _part = DayPart.of(DateTime.now().hour);
+  int _day = DateTime.now().day;
   Timer? _clock;
   bool _away = false;
-  int _returns = 0;
+
+  /// Reminders marked done today: the next-reminder card skips them and the
+  /// progress ring counts them, so the two always agree.
+  Set<String> _doneToday = const {};
 
   @override
   void initState() {
     super.initState();
+    _loadDone();
     _clock = Timer.periodic(const Duration(minutes: 1), (_) {
-      final part = DayPart.of(DateTime.now().hour);
+      final now = DateTime.now();
+      final part = DayPart.of(now.hour);
       if (part != _part) setState(() => _part = part);
+      if (now.day != _day) {
+        _day = now.day;
+        _loadDone();
+      }
     });
+  }
+
+  Future<void> _loadDone() async {
+    final done = await remindersDoneToday(ref.read(repoProvider), DateTime.now());
+    if (mounted) setState(() => _doneToday = done);
   }
 
   @override
@@ -87,11 +102,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     await closed;
     route.animation?.removeStatusListener(covered);
     if (!mounted) return;
-    setState(() {
-      _away = false;
-      _returns++;
-    });
+    setState(() => _away = false);
     _syncTilt();
+    _loadDone(); // a reminder may have been marked done meanwhile
   }
 
   @override
@@ -131,7 +144,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                         onSettings: (from) => _open(from, const SettingsScreen()),
                       ),
                     ),
-                    _NextReminderCard(onOpen: (from) => _open(from, const RemindersScreen())),
+                    _NextReminderCard(done: _doneToday, onOpen: (from) => _open(from, const RemindersScreen())),
                     const _OnTimeRemindersCard(),
                     const _SignInAgainBanner(),
                     if (!online) const Padding(padding: EdgeInsets.only(top: 12), child: ClipRRect(borderRadius: BorderRadius.all(Radius.circular(18)), child: OfflineBanner())),
@@ -187,7 +200,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                         ),
                       ],
                     ),
-                    _TodayProgress(refresh: _returns),
+                    _TodayProgress(done: _doneToday),
                   ],
                 ),
               ],
@@ -301,8 +314,10 @@ const _kindIcon = {
 };
 
 class _NextReminderCard extends ConsumerWidget {
-  const _NextReminderCard({required this.onOpen});
+  const _NextReminderCard({required this.done, required this.onOpen});
 
+  /// Reminders already marked done today, which are not "next" any more.
+  final Set<String> done;
   final void Function(BuildContext from) onOpen;
 
   @override
@@ -319,7 +334,7 @@ class _NextReminderCard extends ConsumerWidget {
         }
 
         final upcoming = (snap.data ?? const <ReminderRow>[])
-            .where((r) => r.active && daysOf(r).contains(now.weekday - 1) && minutesOf(r) >= nowMin)
+            .where((r) => r.active && !done.contains(r.id) && daysOf(r).contains(now.weekday - 1) && minutesOf(r) >= nowMin)
             .toList()
           ..sort((a, b) => minutesOf(a).compareTo(minutesOf(b)));
         final next = upcoming.isEmpty ? null : upcoming.first;
@@ -369,82 +384,57 @@ class _NextReminderCard extends ConsumerWidget {
 }
 
 /// A ring showing how many of today's reminders are done.
-class _TodayProgress extends ConsumerStatefulWidget {
-  const _TodayProgress({required this.refresh});
+class _TodayProgress extends ConsumerWidget {
+  const _TodayProgress({required this.done});
 
-  /// Changes each time the user comes back to the home screen.
-  final int refresh;
-
-  @override
-  ConsumerState<_TodayProgress> createState() => _TodayProgressState();
-}
-
-class _TodayProgressState extends ConsumerState<_TodayProgress> {
-  (int, int)? _count;
+  /// Reminders marked done today.
+  final Set<String> done;
 
   @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void didUpdateWidget(_TodayProgress oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.refresh != widget.refresh) _load();
-  }
-
-  Future<void> _load() async {
-    final repo = ref.read(repoProvider);
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day);
-    final date = occurrenceDate(start);
-    final today = (await repo.reminders()).where((r) => r.active && daysOf(r).contains(now.weekday - 1)).toList();
-    var done = 0;
-    for (final r in today) {
-      if (await repo.hasActivity('reminder_done', (p) => p['reminder_id'] == r.id && p['date'] == date, start)) done++;
-    }
-    if (mounted) setState(() => _count = (done, today.length));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final count = _count;
-    if (count == null || count.$2 == 0) return const SizedBox.shrink();
+  Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
-    final (done, total) = count;
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.8),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white),
-          boxShadow: const [BoxShadow(color: Color(0x800A283C), offset: Offset(0, 12), blurRadius: 24, spreadRadius: -18)],
-        ),
-        child: Row(
-          children: [
-            SizedBox.square(
-              dimension: 46,
-              child: CircularProgressIndicator(
-                value: done / total,
-                strokeWidth: 7,
-                strokeCap: StrokeCap.round,
-                backgroundColor: const Color(0xFFD6E6E1),
-                color: const Color(0xFF18A28D),
-              ),
+    return StreamBuilder<List<ReminderRow>>(
+      stream: ref.watch(repoProvider).watchReminders(),
+      builder: (context, snap) {
+        final weekday = DateTime.now().weekday - 1;
+        final today = (snap.data ?? const <ReminderRow>[]).where((r) => r.active && daysOf(r).contains(weekday)).toList();
+        if (today.isEmpty) return const SizedBox.shrink();
+        final total = today.length;
+        final finished = today.where((r) => done.contains(r.id)).length;
+        return Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white),
+              boxShadow: const [BoxShadow(color: Color(0x800A283C), offset: Offset(0, 12), blurRadius: 24, spreadRadius: -18)],
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                '${s.t('reminders')}: ${s.pack.localizeDigits('$done / $total')}',
-                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: Color(0xFF10221F)),
-              ),
+            child: Row(
+              children: [
+                SizedBox.square(
+                  dimension: 46,
+                  child: CircularProgressIndicator(
+                    value: finished / total,
+                    strokeWidth: 7,
+                    strokeCap: StrokeCap.round,
+                    backgroundColor: const Color(0xFFD6E6E1),
+                    color: const Color(0xFF18A28D),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    '${s.t('reminders')}: ${s.pack.localizeDigits('$finished / $total')}',
+                    style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: Color(0xFF10221F)),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
