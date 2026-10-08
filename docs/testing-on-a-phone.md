@@ -97,6 +97,7 @@ while ($true) { .\adb reverse tcp:8000 tcp:8000 *> $null; Start-Sleep 3 }
 | Memory book | **Memories** shows Rina, Bipul and Mala; the speaker button reads each one aloud. |
 | Games | Play a few rounds of several games. Levels adjust after a couple of sessions. |
 | Sathi | Ask "when is my medicine?", "who is Rina?" and "what day is it?", by voice and by typing. Turn on airplane mode: these still work. |
+| Home screen look | The hills match the time of day and shift gently when you tilt the phone; tiles sink when pressed and grow into their screens. In Android's accessibility settings, turn on **Remove animations**: the hills, tiles and Sathi stay still. |
 | Offline | In airplane mode, play a game and mark a reminder done. Reconnect: it uploads at the next sync and **Last synced** updates. Over the USB cable, unplug it instead: airplane mode does not cut the cable. |
 | Languages | Switch language in Settings. Voice uses the phone's own voices; Assamese and Bengali-script Manipuri may fall back to a Bengali voice, and Bodo to a Hindi one; if a language has none (Meitei Mayek Manipuri) the app says so. |
 | Sign in again | Run `.venv\Scripts\python -m app.demo --phone 9876543210 --end-sessions`. Within the hour (when the phone's current access token runs out) the home screen shows **Sign in again**. Everything on the phone is still there; after signing in, syncing resumes. |
