@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../design/celebration.dart';
+import '../design/raised_button.dart';
 import '../games/session_recorder.dart';
 import '../state/app_state.dart';
 import 'games_screen.dart';
@@ -104,55 +106,93 @@ class _QuickTapScreenState extends ConsumerState<QuickTapScreen> {
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
-    final text = Theme.of(context).textTheme;
+    final still = MediaQuery.of(context).disableAnimations;
     return Scaffold(
-      appBar: AppBar(title: Text(s.gameName(widget.game.slug, widget.game.name))),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: recorder == null
-              ? const Center(child: CircularProgressIndicator())
-              : finished
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text('🌟', textAlign: TextAlign.center, style: TextStyle(fontSize: 90)),
-                        Text(s.t('finished'), textAlign: TextAlign.center, style: text.displaySmall),
-                        Text(s.t('score', {'correct': recorder!.correct, 'total': recorder!.trials}),
-                            textAlign: TextAlign.center, style: text.headlineMedium),
-                        const SizedBox(height: 32),
-                        FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(s.t('done'))),
-                      ],
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text('${s.t('tap_when_you_see')}  $target', style: text.headlineMedium),
-                        Expanded(
-                          child: Center(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 150),
-                              child: Text(
-                                index < 0 ? '…' : sequence[index],
-                                key: ValueKey(index),
-                                style: const TextStyle(fontSize: 140),
+      backgroundColor: playGround,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: Text(s.gameName(widget.game.slug, widget.game.name)),
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+      ),
+      body: DecoratedBox(
+        decoration: playBackdrop,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: recorder == null
+                ? const Center(child: CircularProgressIndicator())
+                : finished
+                    ? Celebration(
+                        title: s.t('finished'),
+                        score: s.t('score', {'correct': recorder!.correct, 'total': recorder!.trials}),
+                        stars: starsFor(recorder!.correct, recorder!.trials),
+                        action: s.t('done'),
+                        onAction: () => Navigator.of(context).pop(),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: Text(s.t('tap_when_you_see'), style: Theme.of(context).textTheme.headlineMedium)),
+                              const SizedBox(width: 12),
+                              _Disc(emoji: target, size: 84, ring: const Color(0xFF18A28D)),
+                            ],
+                          ),
+                          Expanded(
+                            child: Center(
+                              child: AnimatedSwitcher(
+                                duration: still ? Duration.zero : const Duration(milliseconds: 180),
+                                transitionBuilder: (child, animation) =>
+                                    ScaleTransition(scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack), child: child),
+                                child: _Disc(
+                                  key: ValueKey(index),
+                                  emoji: index < 0 ? '…' : sequence[index],
+                                  size: 230,
+                                  ring: tapped ? const Color(0xFF22A45D) : Colors.white,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          height: 120,
-                          child: FilledButton(
+                          RaisedButton3D(
+                            label: s.t('tap'),
+                            height: 120,
+                            fontSize: 38,
+                            tone: tapped ? ButtonTone.soft : ButtonTone.go,
                             onPressed: _tap,
-                            style: FilledButton.styleFrom(backgroundColor: tapped ? Colors.grey : null),
-                            child: Text(s.t('tap'), style: const TextStyle(fontSize: 36)),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// A picture on a raised white disc; the ring turns green once it is tapped.
+class _Disc extends StatelessWidget {
+  const _Disc({super.key, required this.emoji, required this.size, required this.ring});
+
+  final String emoji;
+  final double size;
+  final Color ring;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(center: Alignment(-0.3, -0.4), colors: [Colors.white, Color(0xFFE4EFEB)], stops: [0.4, 1]),
+        border: Border.all(color: ring, width: size / 30),
+        boxShadow: [BoxShadow(color: const Color(0x660A283C), offset: Offset(0, size / 10), blurRadius: size / 6, spreadRadius: -size / 14)],
+      ),
+      child: Text(emoji, style: TextStyle(fontSize: size * 0.5, height: 1.1)),
     );
   }
 }

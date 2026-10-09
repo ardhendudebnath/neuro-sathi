@@ -95,7 +95,7 @@ while ($true) { .\adb reverse tcp:8000 tcp:8000 *> $null; Start-Sleep 3 }
 | Your name | Change it in Settings and tap **Save**: the home screen greets you with it. Signing in on another phone with a name also changes it. |
 | Background sync | On the computer run `.venv\Scripts\python -m app.demo --phone 9876543210 --remind-in 5`. In the app, open Settings, tap **Background sync in 1 minute**, and close the app. The job pulls the new reminder by itself and it rings about 5 minutes later, without the app being opened. **Last synced** in Settings shows when the job ran. |
 | Memory book | **Memories** shows Rina, Bipul and Mala; the speaker button reads each one aloud. |
-| Games | Play a few rounds of several games. Levels adjust after a couple of sessions. |
+| Games | Swipe through the game cards or use the arrows, then play a few rounds of several games: a right answer turns green, a wrong one shakes, and each game ends with stars. Levels adjust after a couple of sessions. |
 | Sathi | Ask "when is my medicine?", "who is Rina?" and "what day is it?", by voice and by typing. Turn on airplane mode: these still work. |
 | Home screen look | The hills match the time of day and shift gently when you tilt the phone; tiles sink when pressed and grow into their screens. In Android's accessibility settings, turn on **Remove animations**: the hills, tiles and Sathi stay still. |
 | Offline | In airplane mode, play a game and mark a reminder done. Reconnect: it uploads at the next sync and **Last synced** updates. Over the USB cable, unplug it instead: airplane mode does not cut the cable. |
