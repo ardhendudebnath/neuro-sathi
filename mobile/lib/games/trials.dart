@@ -183,13 +183,3 @@ List<Trial> trialsFor(String slug, GameContent c, int level, Random rnd) => swit
       'my_day' => myDay(c, level, rnd),
       _ => oddOneOut(c, level, rnd),
     };
-
-const gameIcons = {
-  'photo_recall': '👪',
-  'market_list': '🧺',
-  'odd_one_out': '🔍',
-  'gamosa_patterns': '🧵',
-  'name_it': '🏺',
-  'quick_tap': '👆',
-  'my_day': '🌅',
-};

@@ -4,6 +4,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../design/celebration.dart';
+import '../design/choice_tile.dart';
+import '../design/lit_tile.dart';
+import '../design/raised_button.dart';
 import '../games/session_recorder.dart';
 import '../games/trials.dart';
 import '../state/app_state.dart';
@@ -125,25 +129,48 @@ class _GamePlayScreenState extends ConsumerState<GamePlayScreen> {
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
+    final playing = phase != _Phase.loading && phase != _Phase.done;
     return Scaffold(
+      backgroundColor: playGround,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(s.gameName(widget.game.slug, widget.game.name)),
-        bottom: phase == _Phase.loading || phase == _Phase.done
-            ? null
-            : PreferredSize(
-                preferredSize: const Size.fromHeight(8),
-                child: LinearProgressIndicator(value: (index + 1) / trials.length, minHeight: 8),
-              ),
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        bottom: playing
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(22),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  child: LinearProgressIndicator(
+                    value: (index + 1) / trials.length,
+                    minHeight: 12,
+                    borderRadius: BorderRadius.circular(6),
+                    backgroundColor: const Color(0xFFD6E6E1),
+                    color: const Color(0xFF18A28D),
+                  ),
+                ),
+              )
+            : null,
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: switch (phase) {
-            _Phase.loading => const Center(child: CircularProgressIndicator()),
-            _Phase.memorize => _memorize(s.t('remember_these'), s.t('ready')),
-            _Phase.question || _Phase.feedback => _question(s.t(trials[index].promptKey), s.t('next')),
-            _Phase.done => _done(s.t('finished'), s.t('score', {'correct': recorder.correct, 'total': recorder.trials}), s.t('done')),
-          },
+      body: DecoratedBox(
+        decoration: playBackdrop,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: switch (phase) {
+              _Phase.loading => const Center(child: CircularProgressIndicator()),
+              _Phase.memorize => _memorize(s.t('remember_these'), s.t('ready')),
+              _Phase.question || _Phase.feedback => _question(s.t(trials[index].promptKey), s.t('next')),
+              _Phase.done => Celebration(
+                  title: s.t('finished'),
+                  score: s.t('score', {'correct': recorder.correct, 'total': recorder.trials}),
+                  stars: starsFor(recorder.correct, recorder.trials),
+                  action: s.t('done'),
+                  onAction: () => Navigator.of(context).pop(),
+                ),
+            },
+          ),
         ),
       ),
     );
@@ -157,99 +184,96 @@ class _GamePlayScreenState extends ConsumerState<GamePlayScreen> {
         Text(title, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 20),
         Expanded(
-          child: ListView(
-            children: [
-              for (final item in items)
-                Card(
-                  elevation: 0,
-                  color: Theme.of(context).colorScheme.secondaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Text(item, style: Theme.of(context).textTheme.headlineMedium),
-                  ),
-                ),
-            ],
+          child: ListView.separated(
+            padding: const EdgeInsets.only(bottom: 12),
+            itemCount: items.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (_, i) => _MemoryCard(items[i]),
           ),
         ),
-        FilledButton(onPressed: _askQuestion, child: Text(ready)),
+        RaisedButton3D(label: ready, onPressed: _askQuestion),
       ],
     );
   }
 
+  ChoiceState _stateOf(int i) {
+    if (phase != _Phase.feedback) return ChoiceState.idle;
+    if (i == trials[index].answer) return ChoiceState.correct;
+    if (i == picked) return ChoiceState.wrong;
+    return ChoiceState.faded;
+  }
+
   Widget _question(String prompt, String next) {
     final t = trials[index];
-    final scheme = Theme.of(context).colorScheme;
     final emojiOptions = t.options.every((o) => o.runes.length <= 2);
+    Widget choice(int i) => ChoiceTile(label: t.options[i], big: emojiOptions, state: _stateOf(i), onTap: () => _answer(i));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(prompt, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 16),
         if (t.imagePath != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.file(File(t.imagePath!), height: 220, fit: BoxFit.cover),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: const [BoxShadow(color: Color(0x590A283C), offset: Offset(0, 14), blurRadius: 24, spreadRadius: -12)],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Image.file(File(t.imagePath!), height: 220, fit: BoxFit.cover),
+            ),
           ),
         if (t.display != null)
           Container(
             padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white),
+              boxShadow: const [BoxShadow(color: Color(0x4D0A283C), offset: Offset(0, 12), blurRadius: 22, spreadRadius: -14)],
+            ),
             child: Text(t.display!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 30, height: 1.3)),
           ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         Expanded(
           child: emojiOptions
               ? GridView.count(
+                  padding: const EdgeInsets.only(top: 12, bottom: 8),
                   crossAxisCount: t.options.length <= 4 ? 2 : 3,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  children: [for (var i = 0; i < t.options.length; i++) _option(i, emoji: true)],
+                  mainAxisSpacing: 14,
+                  crossAxisSpacing: 14,
+                  children: [for (var i = 0; i < t.options.length; i++) choice(i)],
                 )
               : ListView.separated(
+                  padding: const EdgeInsets.only(top: 12, bottom: 8),
                   itemCount: t.options.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (_, i) => _option(i),
+                  separatorBuilder: (_, _) => const SizedBox(height: 14),
+                  itemBuilder: (_, i) => choice(i),
                 ),
         ),
-        if (phase == _Phase.feedback) FilledButton(onPressed: _next, child: Text(next)),
+        if (phase == _Phase.feedback) Padding(padding: const EdgeInsets.only(top: 8), child: RaisedButton3D(label: next, onPressed: _next)),
       ],
     );
   }
+}
 
-  Widget _option(int i, {bool emoji = false}) {
-    final t = trials[index];
-    final scheme = Theme.of(context).colorScheme;
-    Color? bg;
-    if (phase == _Phase.feedback) {
-      if (i == t.answer) bg = const Color(0xFFCDEFD6);
-      if (i == picked && i != t.answer) bg = const Color(0xFFFDE2DD);
-    }
-    return Material(
-      color: bg ?? scheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: scheme.outline, width: 2)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _answer(i),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 72),
-          alignment: Alignment.center,
-          padding: const EdgeInsets.all(14),
-          child: Text(t.options[i], textAlign: TextAlign.center, style: TextStyle(fontSize: emoji ? 54 : 24, fontWeight: FontWeight.w600)),
-        ),
+/// One thing to remember, on a warm raised card.
+class _MemoryCard extends StatelessWidget {
+  const _MemoryCard(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    const tone = TileTone.amber;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFF4E5), Color(0xFFFFE2BF)]),
+        boxShadow: const [BoxShadow(color: Color(0x59B05C14), offset: Offset(0, 12), blurRadius: 20, spreadRadius: -12)],
       ),
+      child: Text(text, style: TextStyle(fontSize: 26, height: 1.2, fontWeight: FontWeight.w700, color: tone.ink)),
     );
   }
-
-  Widget _done(String title, String score, String done) => Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('🌟', textAlign: TextAlign.center, style: TextStyle(fontSize: 90)),
-          Text(title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.displaySmall),
-          const SizedBox(height: 12),
-          Text(score, textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 32),
-          FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(done)),
-        ],
-      );
 }

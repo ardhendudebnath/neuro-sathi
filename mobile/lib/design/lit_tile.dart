@@ -69,6 +69,39 @@ class TileTone {
     ballDeep: Color(0xFFA8281C),
     ink: Color(0xFF7A1F15),
   );
+
+  /// A right answer.
+  static const green = TileTone(
+    face: Color(0xFFEAF8EE),
+    faceDeep: Color(0xFFC2EDCF),
+    shadow: Color(0x75126B3A),
+    ballLight: Color(0xFF7FDCA0),
+    ball: Color(0xFF22A45D),
+    ballDeep: Color(0xFF126B3A),
+    ink: Color(0xFF0E4A27),
+  );
+
+  /// The star at the end of a game.
+  static const gold = TileTone(
+    face: Color(0xFFFFF7E0),
+    faceDeep: Color(0xFFFFE3A3),
+    shadow: Color(0x80C77700),
+    ballLight: Color(0xFFFFE27A),
+    ball: Color(0xFFFFB21E),
+    ballDeep: Color(0xFFC77700),
+    ink: Color(0xFF6A4200),
+  );
+
+  /// A plain white face, for answer choices before they are picked.
+  static const plain = TileTone(
+    face: Color(0xFFFFFFFF),
+    faceDeep: Color(0xFFE4EFEB),
+    shadow: Color(0x59134F46),
+    ballLight: Color(0xFF9ADBD0),
+    ball: Color(0xFF2FAE98),
+    ballDeep: Color(0xFF127466),
+    ink: Color(0xFF0E2E29),
+  );
 }
 
 /// A glossy ball with a white icon. Its highlight and shadow follow the tilt,
